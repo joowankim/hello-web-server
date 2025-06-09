@@ -1,14 +1,9 @@
-
-class WebServer:
-    def start(self):
-        print("Web server started.")
-
-    def stop(self):
-        print("Web server stopped.")
+from web_server.server import Server
 
 
 def main():
-    print("Hello from python-web-server!")
+    server = Server(host="localhost", port=8000)
+    server.run()
 
 
 if __name__ == "__main__":
