@@ -25,3 +25,22 @@ class SocketReader:
         data = self.buf.read(size)
         self._read_cursor = self.buf.tell()
         return data
+
+
+class LengthReader:
+    def __init__(self, socket_reader: SocketReader, length: int):
+        self.socket_reader = socket_reader
+        self.length = length
+
+    def read(self, size: int | None = None) -> bytes:
+        if not isinstance(size, int):
+            raise TypeError("size must be an integral type")
+
+        size = min(size, self.length)
+        if size < 0:
+            raise ValueError("Size must be positive.")
+        if size == 0:
+            return b""
+
+        self.length -= size
+        return self.socket_reader.read(size)
