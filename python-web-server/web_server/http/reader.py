@@ -1,6 +1,9 @@
 import io
 import os
 import socket
+from collections.abc import Generator
+
+from typing import Self, IO, ClassVar
 
 
 class SocketReader:
@@ -43,9 +46,9 @@ class LengthReader:
         self.socket_reader = socket_reader
         self.length = length
 
-    def read(self, size: int | None = None) -> bytes:
+    def read(self, size: int) -> bytes:
         if not isinstance(size, int):
-            raise TypeError("size must be an integral type")
+            raise TypeError("size must be an integer type")
 
         size = min(size, self.length)
         if size < 0:
@@ -55,3 +58,51 @@ class LengthReader:
 
         self.length -= size
         return self.socket_reader.read(size)
+
+
+class Chunk:
+    CRLF_NOT_FOUND: ClassVar[int] = -1
+
+    def __init__(
+        self, data: IO[bytes], size: int, trailers: list[tuple[str, str]] | None = None
+    ):
+        self.data = data
+        self.size = size
+        self.trailers = trailers
+
+    @classmethod
+    def from_socket_reader(
+        cls, socket_reader: SocketReader
+    ) -> Generator[Self, None, None]:
+        buf = io.BytesIO()
+        CRLF = b"\r\n"
+        CRLF_LENGTH = len(CRLF)
+
+        stream = socket_reader.read()
+        buf.write(stream)
+        while stream:
+            buf.write(stream)
+            idx = buf.getvalue().find(CRLF)
+            while idx == cls.CRLF_NOT_FOUND:
+                stream = socket_reader.read()
+                if not stream:
+                    break
+                buf.write(stream)
+                idx = buf.getvalue().find(CRLF)
+            size_line = buf.getvalue()[:idx]
+            chunk_size, *_ = size_line.split(b";", 1)
+            size = int(chunk_size.rstrip(b" \t"), 16)
+            chunk_start, chunk_end = idx + CRLF_LENGTH, idx + CRLF_LENGTH + size
+            if size == 0:
+                chunk_end = buf.getvalue().find(CRLF + CRLF)
+                while chunk_end == -1:
+                    stream = socket_reader.read()
+                    if not stream:
+                        break
+                    buf.write(stream)
+                    chunk_end = buf.getvalue().find(CRLF + CRLF)
+            yield cls(data=io.BytesIO(buf.getvalue()[chunk_start:chunk_end]), size=size)
+            if size == 0:
+                break
+            buf = io.BytesIO(buf.getvalue()[chunk_end + CRLF_LENGTH :])
+            stream = socket_reader.read()
