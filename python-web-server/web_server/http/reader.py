@@ -130,4 +130,35 @@ class Chunk:
             buf = io.BytesIO(buf.getvalue()[chunk_end + crlf_length :])
             buf.seek(0, os.SEEK_END)
 
-        # *chunks, trailer_part =
+
+class ChunkedReader:
+    def __init__(self, buf: IO[bytes], trailers: list[tuple[str, str]]):
+        self.buf = buf
+        self.trailers = trailers
+        self._read_cursor = 0
+
+    @classmethod
+    def parse_chunked(cls, socket_reader: SocketReader) -> Self:
+        buf = io.BytesIO()
+        trailers = []
+
+        chunks = Chunk.from_socket_reader(socket_reader)
+        for chunk in chunks:
+            if chunk.is_last:
+                trailers = chunk.trailers
+                break
+            chunk.data.seek(0, os.SEEK_SET)
+            buf.write(chunk.data.read())
+        buf.seek(0, os.SEEK_SET)
+        return cls(buf, trailers)
+
+    def read(self, size: int) -> bytes:
+        if size is not None and not isinstance(size, int):
+            raise TypeError("size must be an integer type")
+
+        if size < 0:
+            raise ValueError("Size must be positive.")
+        if size == 0:
+            return b""
+
+        return self.buf.read(size)
