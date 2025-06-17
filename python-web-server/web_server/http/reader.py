@@ -64,36 +64,47 @@ class LengthReader:
 
 class Chunk:
     CRLF_NOT_FOUND: ClassVar[int] = -1
+    CRLF: ClassVar[bytes] = b"\r\n"
 
-    def __init__(
-        self, data: IO[bytes], size: int, trailers: list[tuple[str, str]] | None = None
-    ):
+    def __init__(self, data: IO[bytes], size: int):
         self.data = data
         self.size = size
-        self.trailers = trailers
 
     @property
     def is_last(self) -> bool:
         return self.size == 0
+
+    @property
+    def trailers(self) -> list[tuple[str, str]]:
+        if not self.is_last:
+            return []
+        return [
+            tuple(
+                [
+                    value.replace(b"\r\n", b"").decode("utf-8").strip()
+                    for value in line.split(b":")
+                ]
+            )
+            for line in self.data.readlines()
+        ]
 
     @classmethod
     def from_socket_reader(
         cls, socket_reader: SocketReader
     ) -> Generator[Self, None, None]:
         buf = io.BytesIO()
-        CRLF = b"\r\n"
-        CRLF_LENGTH = len(CRLF)
+        crlf_length = len(cls.CRLF)
 
         while True:
             stream = socket_reader.read()
             buf.write(stream)
-            size_end_idx = buf.getvalue().find(CRLF)
+            size_end_idx = buf.getvalue().find(cls.CRLF)
             while size_end_idx == cls.CRLF_NOT_FOUND:
                 stream = socket_reader.read()
                 if not stream:
                     break
                 buf.write(stream)
-                size_end_idx = buf.getvalue().find(CRLF)
+                size_end_idx = buf.getvalue().find(cls.CRLF)
             size_line = buf.getvalue()[:size_end_idx]
             chunk_size, *_ = size_line.split(b";", 1)
             if not chunk_size or any(
@@ -101,23 +112,22 @@ class Chunk:
             ):
                 raise InvalidChunkSize(chunk_size)
             size = int(chunk_size.rstrip(b" \t"), 16)
-            chunk_start = size_end_idx + CRLF_LENGTH
-            chunk_end = size_end_idx + CRLF_LENGTH + size
-            while chunk_end + CRLF_LENGTH > buf.tell():
+            chunk_start = size_end_idx + crlf_length
+            chunk_end = size_end_idx + crlf_length + size
+            while chunk_end + crlf_length > buf.tell():
                 buf.write(socket_reader.read())
             if size == 0:
-                chunk_end = buf.getvalue().find(CRLF + CRLF)
+                chunk_end = buf.getvalue().find(cls.CRLF + cls.CRLF)
                 while chunk_end == cls.CRLF_NOT_FOUND:
                     stream = socket_reader.read()
                     if not stream:
                         break
                     buf.write(stream)
-                    chunk_end = buf.getvalue().find(CRLF + CRLF)
+                    chunk_end = buf.getvalue().find(cls.CRLF + cls.CRLF)
             yield cls(data=io.BytesIO(buf.getvalue()[chunk_start:chunk_end]), size=size)
             if size == 0:
                 break
-            buf = io.BytesIO(buf.getvalue()[chunk_end + CRLF_LENGTH :])
+            buf = io.BytesIO(buf.getvalue()[chunk_end + crlf_length :])
             buf.seek(0, os.SEEK_END)
-            stream = socket_reader.read()
 
         # *chunks, trailer_part =

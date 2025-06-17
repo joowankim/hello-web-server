@@ -112,3 +112,31 @@ def test_is_last():
 
     last_chunk = Chunk(data=io.BytesIO(b""), size=0)
     assert last_chunk.is_last is True
+
+
+@pytest.mark.parametrize(
+    "chunk, expected",
+    [
+        (Chunk(data=io.BytesIO(b"hello"), size=5), []),
+        (
+            Chunk(
+                data=io.BytesIO(b"Vary: *\r\nContent-Type: text/plain"),
+                size=0,
+            ),
+            [("Vary", "*"), ("Content-Type", "text/plain")],
+        ),
+        (
+            Chunk(
+                data=io.BytesIO(b"Trailer-Name: value\r\nAnother-Header: value2"),
+                size=0,
+            ),
+            [("Trailer-Name", "value"), ("Another-Header", "value2")],
+        ),
+        (
+            Chunk(data=io.BytesIO(b""), size=0),
+            [],
+        ),
+    ],
+)
+def test_trailers(chunk: Chunk, expected: list[tuple[str, str]]):
+    assert chunk.trailers == expected
