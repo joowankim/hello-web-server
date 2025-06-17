@@ -55,3 +55,33 @@ def test_reader_read_with_nonzero_size(socket_reader_factory: SocketReaderFactor
     assert socket_reader.read(size=5) == b"vbn12"
     assert socket_reader.read(size=5) == b"3456"
     assert socket_reader.read(size=5) == b""
+
+
+def test_unread(socket_reader_factory: SocketReaderFactory):
+    socket_reader = socket_reader_factory(b"qwertyasdfgh", 8192)
+    socket_reader.read(size=5)
+
+    socket_reader.unread(size=5)
+
+    assert socket_reader.read(size=None) == b"qwertyasdfgh"
+
+
+@pytest.mark.parametrize(
+    "size, error_type, error_message",
+    [
+        (-2, ValueError, "Size must be positive."),
+        ("foobar", TypeError, "size must be an integer type"),
+        (3.14, TypeError, "size must be an integer type"),
+        ([], TypeError, "size must be an integer type"),
+    ],
+)
+def test_unread_with_invalid_size(
+    socket_reader_factory: SocketReaderFactory,
+    size: int | str | float | list,
+    error_type: type[Exception],
+    error_message: str,
+):
+    socket_reader = socket_reader_factory(b"qwerty", 8192)
+
+    with pytest.raises(error_type, match=error_message):
+        socket_reader.unread(size=size)

@@ -26,6 +26,17 @@ class SocketReader:
         self._read_cursor = self.buf.tell()
         return data
 
+    def unread(self, size: int) -> None:
+        if not isinstance(size, int):
+            raise TypeError("size must be an integer type")
+        if size < 0:
+            raise ValueError("Size must be positive.")
+        if size == 0:
+            return
+
+        self._read_cursor = max(0, self._read_cursor - size)
+        self.buf.seek(self._read_cursor, os.SEEK_SET)
+
 
 class LengthReader:
     def __init__(self, socket_reader: SocketReader, length: int):
