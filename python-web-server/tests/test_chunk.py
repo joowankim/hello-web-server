@@ -1,3 +1,4 @@
+import io
 import socket
 from typing import cast
 
@@ -103,3 +104,11 @@ def test_from_socket_reader_with_invalid_chunk_data(
 ):
     with pytest.raises(error_type, match=error_message):
         list(Chunk.from_socket_reader(socket_reader))
+
+
+def test_is_last():
+    chunk = Chunk(data=io.BytesIO(b"test"), size=4)
+    assert chunk.is_last is False
+
+    last_chunk = Chunk(data=io.BytesIO(b""), size=0)
+    assert last_chunk.is_last is True

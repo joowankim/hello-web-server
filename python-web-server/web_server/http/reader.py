@@ -72,6 +72,10 @@ class Chunk:
         self.size = size
         self.trailers = trailers
 
+    @property
+    def is_last(self) -> bool:
+        return self.size == 0
+
     @classmethod
     def from_socket_reader(
         cls, socket_reader: SocketReader
