@@ -4,6 +4,7 @@ from typing import cast
 import pytest
 
 from tests import fake
+from web_server.http.errors import InvalidChunkSize
 from web_server.http.reader import Chunk, SocketReader
 
 
@@ -67,3 +68,31 @@ def test_from_socket_reader(
     for chunk, (data, size) in zip(chunks, expected):
         assert chunk.data.read() == data
         assert chunk.size == size
+
+
+@pytest.mark.parametrize(
+    "socket_reader, error_type, error_message",
+    [
+        (
+            b"-5\r\nhello\r\n6\r\n world\r\n0\r\n\r\n",
+            InvalidChunkSize,
+            "Invalid chunk size: b'-5'",
+        ),
+        (
+            b"t\r\nhello\r\n6\r\n world\r\n0\r\n",
+            InvalidChunkSize,
+            "Invalid chunk size: b't'",
+        ),
+        (
+            b"\r\nhello\r\n6\r\n world\r\n0\r\n\r\n",
+            InvalidChunkSize,
+            "Invalid chunk size: b''",
+        ),
+    ],
+    indirect=["socket_reader"],
+)
+def test_from_socket_reader_with_invalid_chunk_data(
+    socket_reader: SocketReader, error_type: type[Exception], error_message: str
+):
+    with pytest.raises(error_type, match=error_message):
+        list(Chunk.from_socket_reader(socket_reader))

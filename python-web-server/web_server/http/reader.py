@@ -5,6 +5,8 @@ from collections.abc import Generator
 
 from typing import Self, IO, ClassVar
 
+from web_server.http.errors import InvalidChunkSize
+
 
 class SocketReader:
     def __init__(self, sock: socket.socket, max_chunk: int = 8192):
@@ -91,6 +93,10 @@ class Chunk:
                 idx = buf.getvalue().find(CRLF)
             size_line = buf.getvalue()[:idx]
             chunk_size, *_ = size_line.split(b";", 1)
+            if not chunk_size or any(
+                n not in b"0123456789abcdefABCDEF" for n in chunk_size
+            ):
+                raise InvalidChunkSize(chunk_size)
             size = int(chunk_size.rstrip(b" \t"), 16)
             chunk_start, chunk_end = idx + CRLF_LENGTH, idx + CRLF_LENGTH + size
             if size == 0:
@@ -106,3 +112,5 @@ class Chunk:
                 break
             buf = io.BytesIO(buf.getvalue()[chunk_end + CRLF_LENGTH :])
             stream = socket_reader.read()
+
+        # *chunks, trailer_part =
