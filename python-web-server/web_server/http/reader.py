@@ -162,3 +162,18 @@ class ChunkedReader:
             return b""
 
         return self.buf.read(size)
+
+
+class EOFReader:
+    def __init__(self, socket_reader: SocketReader):
+        self.socket_reader = socket_reader
+
+    def read(self, size: int) -> bytes:
+        if not isinstance(size, int):
+            raise TypeError("size must be an integer type")
+        if size < 0:
+            raise ValueError("Size must be positive.")
+        if size == 0:
+            return b""
+
+        return self.socket_reader.read(size)
