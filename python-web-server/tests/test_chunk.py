@@ -13,7 +13,7 @@ def socket_reader(request: pytest.FixtureRequest) -> SocketReader:
     payload: bytes = request.param
     fake_sock = fake.FakeSocket(payload)
     fake_sock = cast(socket.socket, fake_sock)
-    return SocketReader(sock=fake_sock, max_chunk=8192)
+    return SocketReader(sock=fake_sock, max_chunk=3)
 
 
 @pytest.mark.parametrize(
@@ -47,8 +47,8 @@ def socket_reader(request: pytest.FixtureRequest) -> SocketReader:
             [(b"hello", 5), (b" world", 6), (b"", 0)],
         ),
         (
-            b"b\r\nhello world\r\n\r\n",
-            [(b"hello world", 11)],
+            b"b\r\nhello world\r\n0\r\n\r\n",
+            [(b"hello world", 11), (b"", 0)],
         ),
     ],
     indirect=["socket_reader"],
