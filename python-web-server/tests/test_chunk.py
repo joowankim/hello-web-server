@@ -8,19 +8,26 @@ from web_server.http.errors import InvalidChunkSize
 from web_server.http.reader import Chunk, SocketReader
 
 
+@pytest.fixture(params=[3, 8192])
+def socket_chunk_size(request: pytest.FixtureRequest) -> int:
+    return request.param
+
+
 @pytest.fixture
-def socket_reader(request: pytest.FixtureRequest) -> SocketReader:
-    payload: bytes = request.param
+def socket_reader(
+    socket_chunk_size: int, request: pytest.FixtureRequest
+) -> SocketReader:
+    payload = request.param
     fake_sock = fake.FakeSocket(payload)
     fake_sock = cast(socket.socket, fake_sock)
-    return SocketReader(sock=fake_sock, max_chunk=3)
+    return SocketReader(sock=fake_sock, max_chunk=socket_chunk_size)
 
 
 @pytest.mark.parametrize(
     "socket_reader, expected",
     [
         (
-            (b"5\r\nhello\r\n6\r\n world\r\n0\r\n\r\n"),
+            b"5\r\nhello\r\n6\r\n world\r\n0\r\n\r\n",
             [(b"hello", 5), (b" world", 6), (b"", 0)],
         ),
         (
