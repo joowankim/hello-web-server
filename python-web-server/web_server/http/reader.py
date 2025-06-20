@@ -1,3 +1,4 @@
+import abc
 import io
 import os
 import socket
@@ -43,7 +44,13 @@ class SocketReader:
         self.buf.seek(self._read_cursor, os.SEEK_SET)
 
 
-class LengthReader:
+class BodyReader(abc.ABC):
+    @abc.abstractmethod
+    def read(self, size: int) -> bytes:
+        raise NotImplementedError
+
+
+class LengthReader(BodyReader):
     def __init__(self, socket_reader: SocketReader, length: int):
         self.socket_reader = socket_reader
         self.length = length
@@ -131,7 +138,7 @@ class Chunk:
             buf.seek(0, os.SEEK_END)
 
 
-class ChunkedReader:
+class ChunkedReader(BodyReader):
     def __init__(self, buf: IO[bytes], trailers: list[tuple[str, str]]):
         self.buf = buf
         self.trailers = trailers
@@ -164,7 +171,7 @@ class ChunkedReader:
         return self.buf.read(size)
 
 
-class EOFReader:
+class EOFReader(BodyReader):
     def __init__(self, socket_reader: SocketReader):
         self.socket_reader = socket_reader
 
