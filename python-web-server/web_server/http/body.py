@@ -1,7 +1,7 @@
 import sys
 from typing import Self
 
-from web_server.http import reader
+from web_server.http import reader, header
 from web_server.http.errors import InvalidHeader, UnsupportedTransferCoding
 
 
@@ -24,26 +24,21 @@ class RequestBody:
             if name == "CONTENT-LENGTH":
                 if content_length is not None:
                     raise InvalidHeader("CONTENT-LENGTH")
-                content_length = value
+                if not str(value).isnumeric():
+                    raise InvalidHeader("CONTENT-LENGTH")
+                content_length = int(value)
             elif name == "TRANSFER-ENCODING":
                 # T-E can be a list
                 # https://datatracker.ietf.org/doc/html/rfc9112#name-transfer-encoding
-                vals = [v.strip() for v in value.split(",")]
-                for val in vals:
-                    if val.lower() == "chunked":
-                        # DANGER: transfer codings stack, and stacked chunking is never intended
-                        if chunked:
-                            raise InvalidHeader("TRANSFER-ENCODING")
-                        chunked = True
-                    elif val.lower() == "identity":
-                        # does not do much, could still plausibly desync from what the proxy does
-                        # safe option: nuke it, its never needed
-                        if chunked:
-                            raise InvalidHeader("TRANSFER-ENCODING")
-                    elif val.lower() in ("compress", "deflate", "gzip"):
-                        raise InvalidHeader("TRANSFER-ENCODING")
-                    else:
-                        raise UnsupportedTransferCoding(value)
+                vals = tuple(v.strip().lower() for v in value.split(","))
+                if vals == (header.TransferEncoding.CHUNKED,):
+                    chunked = True
+                if len(vals) > 1 and {header.TransferEncoding.CHUNKED}.issubset(
+                    set(vals)
+                ):
+                    raise InvalidHeader("TRANSFER-ENCODING")
+                if not set(vals).issubset(set(header.TransferEncoding)):
+                    raise UnsupportedTransferCoding(value)
 
         if chunked:
             # two potentially dangerous cases:
@@ -58,17 +53,8 @@ class RequestBody:
                 raise InvalidHeader("CONTENT-LENGTH")
             return cls(body_reader=reader.ChunkedReader.parse_chunked(socket_reader))
         elif content_length is not None:
-            try:
-                if str(content_length).isnumeric():
-                    content_length = int(content_length)
-                else:
-                    raise InvalidHeader("CONTENT-LENGTH")
-            except ValueError:
-                raise InvalidHeader("CONTENT-LENGTH")
-
             if content_length < 0:
                 raise InvalidHeader("CONTENT-LENGTH")
-
             return cls(body_reader=reader.LengthReader(socket_reader, content_length))
         else:
             return cls(body_reader=reader.EOFReader(socket_reader))
