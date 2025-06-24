@@ -185,3 +185,23 @@ def test_readline(
 ):
     for size, expected in zip(sizes, expected_list):
         assert request_body.readline(size) == expected
+
+
+@pytest.mark.parametrize(
+    "request_body, hint, expected",
+    [
+        (b"Hello, \nWorld!", None, [b"Hello, \n", b"World!"]),
+        (b"Hello, \nWorld!", 5, [b"Hello, \n"]),
+        (b"Hello, \nWorld!", 10, [b"Hello, \n", b"World!"]),
+        (b"", None, []),
+        (b"", 5, []),
+        (b"\n", None, [b"\n"]),
+        (b"\na", 1, [b"\n"]),
+        (b"\na", 2, [b"\n", b"a"]),
+    ],
+    indirect=["request_body"],
+)
+def test_readlines(request_body: RequestBody, hint: int | None, expected: list[bytes]):
+    lines = request_body.readlines(hint)
+
+    assert lines == expected

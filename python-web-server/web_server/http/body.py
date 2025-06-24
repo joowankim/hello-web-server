@@ -12,6 +12,15 @@ class RequestBody:
         self.buf = io.BytesIO()
         self._read_cursor = 0
 
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        ret = self.readline()
+        if not ret:
+            raise StopIteration()
+        return ret
+
     @classmethod
     def create(
         cls,
@@ -95,3 +104,18 @@ class RequestBody:
             return data[: new_line_index + 1]
         self._read_cursor = self.buf.tell()
         return data
+
+    def readlines(self, hint: int | None = None) -> list[bytes]:
+        if hint is not None and not isinstance(hint, int):
+            raise TypeError("hint parameter must be an int or long.")
+
+        if hint is None or hint < 0:
+            return [line for line in self]
+
+        lines = []
+        while sum(len(line) for line in lines) < hint:
+            line = self.readline()
+            if not line:
+                break
+            lines.append(line)
+        return lines
