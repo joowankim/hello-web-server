@@ -43,6 +43,28 @@ class SocketReader:
         self._read_cursor = max(0, self._read_cursor - size)
         self.buf.seek(self._read_cursor, os.SEEK_SET)
 
+    def read_until(self, target: bytes) -> bytes:
+        if not isinstance(target, bytes):
+            raise TypeError("target must be of type bytes")
+        if not target:
+            raise ValueError("target must be non-empty")
+
+        while True:
+            self.buf.seek(self._read_cursor, os.SEEK_SET)
+            data = self.buf.read()
+            if (target_index := data.find(target)) != -1:
+                target_next_index = target_index + len(target)
+                self._read_cursor += target_next_index
+                return data[:target_next_index]
+
+            self.buf.seek(0, io.SEEK_END)
+            chunk = self.chunk()
+            if not chunk:
+                self._read_cursor = self.buf.tell()
+                return data
+
+            self.buf.write(chunk)
+
 
 class BodyReader(abc.ABC):
     @abc.abstractmethod

@@ -85,3 +85,45 @@ def test_unread_with_invalid_size(
 
     with pytest.raises(error_type, match=error_message):
         socket_reader.unread(size=size)
+
+
+@pytest.fixture
+def socket_reader(
+    socket_reader_factory: SocketReaderFactory, request: pytest.FixtureRequest
+) -> SocketReader:
+    payload, max_chunk = request.param
+    return socket_reader_factory(payload, max_chunk)
+
+
+@pytest.mark.parametrize(
+    "socket_reader, targets, expected_list",
+    [
+        (
+            (b"Hello, World!\r\n\r\n", 8192),
+            [b"\r\n\r\n", b"\r\n\r\n", b"\r\n\r\n"],
+            [b"Hello, World!\r\n\r\n", b"", b""],
+        ),
+        (
+            (b"Hello, World!", 8192),
+            [b"\r\n\r\n"],
+            [b"Hello, World!"],
+        ),
+        ((b"", 8192), [b"\r\n\r\n"], [b""]),
+        (
+            (b"Hello, \r\nWorld!\r\n\r\n", 8192),
+            [b"\r\n", b"\r\n", b"\r\n"],
+            [b"Hello, \r\n", b"World!\r\n", b"\r\n"],
+        ),
+        (
+            (b"Hello, \r\nWorld!\r\n\r\n", 3),
+            [b"\r\n", b"\r\n", b"\r\n"],
+            [b"Hello, \r\n", b"World!\r\n", b"\r\n"],
+        ),
+    ],
+    indirect=["socket_reader"],
+)
+def test_read_until(
+    socket_reader: SocketReader, targets: list[bytes], expected_list: list[bytes]
+):
+    for target, expected in zip(targets, expected_list):
+        assert socket_reader.read_until(target) == expected
