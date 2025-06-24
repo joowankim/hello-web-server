@@ -162,3 +162,26 @@ def test_read_iteration(
 ):
     for size, expected in zip(sizes, expected_list):
         assert request_body.read(size) == expected
+
+
+@pytest.mark.parametrize(
+    "request_body, sizes, expected_list",
+    [
+        (b"", [None], [b""]),
+        (b"", [1], [b""]),
+        (b"abc", [0], [b""]),
+        (b"\n", [0], [b""]),
+        (b"abc\ndef", [4, None], [b"abc\n", b"def"]),
+        (b"abc\ndef", [2, 2, None], [b"ab", b"c\n", b"def"]),
+        (b"abcdef", [None], [b"abcdef"]),
+        (b"abcdef", [2, 2, 2], [b"ab", b"cd", b"ef"]),
+        (b"abc\ndefg\nhi", [1, None, None, None], [b"a", b"bc\n", b"defg\n", b"hi"]),
+        (b"abc\ndef", [1, 2, 2, 2, 2], [b"a", b"bc", b"\n", b"de", b"f"]),
+    ],
+    indirect=["request_body"],
+)
+def test_readline(
+    request_body: RequestBody, sizes: list[int | None], expected_list: list[bytes]
+):
+    for size, expected in zip(sizes, expected_list):
+        assert request_body.readline(size) == expected

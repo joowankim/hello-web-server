@@ -1,3 +1,4 @@
+import io
 import sys
 from typing import Self
 
@@ -8,6 +9,8 @@ from web_server.http.errors import InvalidHeader, UnsupportedTransferCoding
 class RequestBody:
     def __init__(self, body_reader: reader.BodyReader):
         self.reader = body_reader
+        self.buf = io.BytesIO()
+        self._read_cursor = 0
 
     @classmethod
     def create(
@@ -63,11 +66,32 @@ class RequestBody:
         if size is not None and not isinstance(size, int):
             raise TypeError("size parameter must be an int or long.")
 
-        if size is None:
-            size = sys.maxsize
-        elif not isinstance(size, int):
-            raise TypeError("size must be an integer type")
-        elif size < 0:
-            size = sys.maxsize
+        new_size = sys.maxsize if size is None or size < 0 else size
 
-        return self.reader.read(size)
+        self.buf.write(self.reader.read(new_size))
+        self.buf.seek(self._read_cursor, io.SEEK_SET)
+        data = self.buf.read(new_size)
+        self._read_cursor = self.buf.tell()
+        return data
+
+    def readline(self, size: int | None = None) -> bytes:
+        if size is not None and not isinstance(size, int):
+            raise TypeError("size parameter must be an int or long.")
+
+        new_size = sys.maxsize if size is None or size < 0 else size
+
+        self.buf.seek(0, io.SEEK_END)
+        chunk_size = 1024
+        while self.buf.tell() < self._read_cursor + new_size:
+            data = self.reader.read(chunk_size)
+            if not data:
+                break
+            self.buf.write(data)
+        self.buf.seek(self._read_cursor, io.SEEK_SET)
+        data = self.buf.read(new_size)
+        new_line_index = data.find(b"\n")
+        if new_line_index != -1:
+            self._read_cursor += new_line_index + 1
+            return data[: new_line_index + 1]
+        self._read_cursor = self.buf.tell()
+        return data
