@@ -96,34 +96,41 @@ def socket_reader(
 
 
 @pytest.mark.parametrize(
-    "socket_reader, targets, expected_list",
+    "socket_reader, args, expected_list",
     [
         (
             (b"Hello, World!\r\n\r\n", 8192),
-            [b"\r\n\r\n", b"\r\n\r\n", b"\r\n\r\n"],
+            [(b"\r\n\r\n", None), (b"\r\n\r\n", None), (b"\r\n\r\n", None)],
             [b"Hello, World!\r\n\r\n", b"", b""],
         ),
         (
             (b"Hello, World!", 8192),
-            [b"\r\n\r\n"],
+            [(b"\r\n\r\n", None)],
             [b"Hello, World!"],
         ),
-        ((b"", 8192), [b"\r\n\r\n"], [b""]),
+        ((b"", 8192), [(b"\r\n\r\n", None)], [b""]),
         (
             (b"Hello, \r\nWorld!\r\n\r\n", 8192),
-            [b"\r\n", b"\r\n", b"\r\n"],
+            [(b"\r\n", None), (b"\r\n", None), (b"\r\n", None)],
             [b"Hello, \r\n", b"World!\r\n", b"\r\n"],
         ),
         (
             (b"Hello, \r\nWorld!\r\n\r\n", 3),
-            [b"\r\n", b"\r\n", b"\r\n"],
+            [(b"\r\n", None), (b"\r\n", None), (b"\r\n", None)],
             [b"Hello, \r\n", b"World!\r\n", b"\r\n"],
+        ),
+        (
+            (b"Hello, World!\r\n\r\n", 5),
+            [(b"\r\n\r\n", 5), (b"\r\n\r\n", None), (b"\r\n\r\n", None)],
+            [b"Hello", b", World!\r\n\r\n", b""],
         ),
     ],
     indirect=["socket_reader"],
 )
 def test_read_until(
-    socket_reader: SocketReader, targets: list[bytes], expected_list: list[bytes]
+    socket_reader: SocketReader,
+    args: list[tuple[bytes, int | None]],
+    expected_list: list[bytes],
 ):
-    for target, expected in zip(targets, expected_list):
-        assert socket_reader.read_until(target) == expected
+    for (target, limit), expected in zip(args, expected_list):
+        assert socket_reader.read_until(target=target, limit=limit) == expected
