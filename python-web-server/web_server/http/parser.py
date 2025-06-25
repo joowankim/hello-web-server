@@ -1,0 +1,75 @@
+import re
+from typing import ClassVar
+
+from web_server import config
+from web_server.http import reader
+from web_server.http.errors import (
+    InvalidHTTPVersion,
+    InvalidRequestLine,
+    InvalidRequestMethod,
+    LimitRequestLine,
+)
+from web_server.util import split_request_uri, bytes_to_str
+
+
+class RequestParser:
+    PROTOCOL_VERSION_TOKEN: ClassVar[re.Pattern] = re.compile(
+        r"HTTP/(?P<major>\d+)\.(?P<minor>\d+)"
+    )
+    RFC9110_5_6_2_TOKEN_SPECIALS: ClassVar[str] = r"!#$%&'*+-.^_`|~"
+    TOKEN_PATTERN: ClassVar[re.Pattern] = re.compile(
+        rf"[{re.escape(RFC9110_5_6_2_TOKEN_SPECIALS)}\w]+"
+    )
+    METHOD_BADCHAR_RE: ClassVar[re.Pattern] = re.compile("[a-z#]")
+
+    def __init__(self, cfg: config.MessageConfig, socket_reader: reader.SocketReader):
+        self.cfg = cfg
+        self.reader = socket_reader
+
+    def parse_request_line(self) -> tuple[str, tuple[str, str, str], tuple[int, int]]:
+        line = self.reader.read_until(b"\r\n", self.cfg.limit_request_line)
+        if not line:
+            raise InvalidRequestLine(line)
+
+        decoded_line = bytes_to_str(line)
+        if not decoded_line.endswith("\r\n"):
+            raise LimitRequestLine()
+        tokens = decoded_line.split(" ")
+        if len(tokens) < 3:
+            raise InvalidRequestLine(decoded_line)
+
+        method, uri, version = tokens
+
+        # validate method
+        if not self.cfg.permit_unconventional_http_method:
+            if self.METHOD_BADCHAR_RE.search(method):
+                raise InvalidRequestMethod(method)
+            if not 3 <= len(method) <= 20:
+                raise InvalidRequestMethod(method)
+        if not self.TOKEN_PATTERN.fullmatch(method):
+            raise InvalidRequestMethod(method)
+
+        # validate uri
+        if not uri:
+            raise InvalidRequestLine(decoded_line)
+
+        try:
+            parts = split_request_uri(uri)
+        except ValueError:
+            raise InvalidRequestLine(decoded_line)
+        path, query, fragment = (
+            parts.path or "",
+            parts.query or "",
+            parts.fragment or "",
+        )
+
+        # validate http version
+        matched = self.PROTOCOL_VERSION_TOKEN.match(version)
+        if not matched:
+            raise InvalidHTTPVersion(version)
+        version = (int(matched.group("major")), int(matched.group("minor")))
+        if not (1, 0) <= version < (2, 0):
+            if not self.cfg.permit_unconventional_http_version:
+                raise InvalidHTTPVersion(version)
+
+        return method, (path, query, fragment), version

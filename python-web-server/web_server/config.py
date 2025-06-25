@@ -15,6 +15,9 @@ class MessageConfig:
     strip_header_spaces: bool
     permit_obsolete_folding: bool
     header_map: str
+    permit_unconventional_http_method: bool
+    permit_unconventional_http_version: bool
+    casefold_http_method: bool
 
     @classmethod
     def default(cls) -> Self:
@@ -32,6 +35,9 @@ class MessageConfig:
             strip_header_spaces=False,
             permit_obsolete_folding=False,
             header_map="drop",
+            permit_unconventional_http_method=False,
+            permit_unconventional_http_version=False,
+            casefold_http_method=False,
         )
 
     @classmethod
@@ -50,6 +56,9 @@ class MessageConfig:
         strip_header_spaces: bool = False,
         permit_obsolete_folding: bool = False,
         header_map: str = "drop",
+        permit_unconventional_http_method: bool = False,
+        permit_unconventional_http_version: bool = False,
+        casefold_http_method: bool = False,
     ) -> Self:
         return cls(
             limit_request_line=min(limit_request_line, MAX_REQUEST_LINE),
@@ -61,4 +70,7 @@ class MessageConfig:
             strip_header_spaces=strip_header_spaces,
             permit_obsolete_folding=permit_obsolete_folding,
             header_map=header_map,
+            permit_unconventional_http_method=permit_unconventional_http_method,
+            permit_unconventional_http_version=permit_unconventional_http_version,
+            casefold_http_method=casefold_http_method,
         )
