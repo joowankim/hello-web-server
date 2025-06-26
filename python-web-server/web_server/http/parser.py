@@ -8,6 +8,8 @@ from web_server.http.errors import (
     InvalidRequestLine,
     InvalidRequestMethod,
     LimitRequestLine,
+    InvalidHeader,
+    LimitRequestHeaders,
 )
 from web_server.util import split_request_uri, bytes_to_str
 
@@ -73,3 +75,20 @@ class RequestParser:
                 raise InvalidHTTPVersion(version)
 
         return method, (path, query, fragment), version
+
+    def parse_headers(self) -> list[tuple[str, str]]:
+        headers = []
+
+        while True:
+            if len(headers) >= self.cfg.limit_request_fields:
+                raise LimitRequestHeaders("limit request headers fields")
+            header_line = self.reader.read_until(b"\r\n")
+            if header_line == b"\r\n":
+                break
+            if len(header_line) > self.cfg.limit_request_field_size:
+                raise LimitRequestHeaders("limit request header field size")
+            header_parts = header_line.decode().strip().split(": ", 1)
+            if len(header_parts) != 2:
+                raise InvalidHeader(header_line)
+            headers.append((header_parts[0], header_parts[1]))
+        return headers

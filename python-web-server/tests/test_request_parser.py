@@ -11,6 +11,7 @@ from web_server.http.errors import (
     InvalidRequestMethod,
     InvalidHTTPVersion,
     LimitRequestLine,
+    LimitRequestHeaders,
 )
 from web_server.http.parser import RequestParser
 from web_server.http.reader import SocketReader
@@ -113,6 +114,14 @@ def test_parse_request_line(
             LimitRequestLine,
             "Request Line is too large",
         ),
+        (
+            (
+                dict(),
+                b"Host: example.com\r\nContent-Length: 13\r\n\r\nHello, World!",
+            ),
+            InvalidRequestLine,
+            re.escape(r"Invalid HTTP request line: 'Host: example.com\r\n'"),
+        ),
     ],
     indirect=["request_parser"],
 )
@@ -123,3 +132,79 @@ def test_parse_request_line_with_invalid_stream(
 ):
     with pytest.raises(error_type, match=error_message):
         request_parser.parse_request_line()
+
+
+@pytest.mark.parametrize(
+    "request_parser, expected",
+    [
+        (
+            (
+                dict(),
+                b"Host: example.com\r\nContent-Length: 13\r\n\r\nHello, World!",
+            ),
+            [("Host", "example.com"), ("Content-Length", "13")],
+        ),
+        (
+            (
+                dict(),
+                b"User-Agent: TestAgent/1.0\r\nAccept: */*\r\n\r\n",
+            ),
+            [("User-Agent", "TestAgent/1.0"), ("Accept", "*/*")],
+        ),
+        (
+            (
+                dict(),
+                b"X-Custom-Header: Value\r\nX-Another-Header: AnotherValue\r\n\r\n",
+            ),
+            [("X-Custom-Header", "Value"), ("X-Another-Header", "AnotherValue")],
+        ),
+        (
+            (
+                dict(limit_request_fields=2),
+                b"Header1: Value1\r\nHeader2: Value2\r\nHeader3: Value3\r\n\r\n",
+            ),
+            [("Header1", "Value1"), ("Header2", "Value2")],
+        ),
+        (
+            (
+                dict(limit_request_field_size=10),
+                b"Short: Value\r\nLongHeaderName: LongValueThatExceedsLimit\r\n\r\n",
+            ),
+            [("Short", "Value")],
+        ),
+    ],
+    indirect=["request_parser"],
+)
+def test_parse_headers(request_parser: RequestParser, expected: list[tuple[str, str]]):
+    headers = request_parser.parse_headers()
+
+    assert headers == expected
+
+
+@pytest.mark.parametrize(
+    "request_parser, error_type, error_message",
+    [
+        (
+            (
+                dict(limit_request_fields=1),
+                b"Header1: Value1\r\nHeader2: Value2\r\n\r\n",
+            ),
+            LimitRequestHeaders,
+            "limit request headers fields",
+        ),
+        (
+            (
+                dict(limit_request_field_size=5),
+                b"Short: Value\r\nLongHeaderName: LongValueThatExceedsLimit\r\n\r\n",
+            ),
+            LimitRequestHeaders,
+            "limit request header field size",
+        ),
+    ],
+    indirect=["request_parser"],
+)
+def test_parse_headers_with_invalid_stream(
+    request_parser: RequestParser, error_type: type[Exception], error_message: str
+):
+    with pytest.raises(error_type, match=error_message):
+        request_parser.parse_headers()
