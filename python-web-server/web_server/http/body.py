@@ -27,7 +27,7 @@ class RequestBody:
         protocol_version: tuple[int, int],
         headers: list[tuple[str, str]],
         socket_reader: reader.SocketReader,
-    ) -> Self:
+    ) -> Self | None:
         chunked = False
         content_length = None
 
@@ -51,6 +51,11 @@ class RequestBody:
                     raise InvalidHeader("TRANSFER-ENCODING")
                 if not set(vals).issubset(set(header.TransferEncoding)):
                     raise UnsupportedTransferCoding(value)
+
+        if not chunked and content_length is None and protocol_version >= (1, 1):
+            # RFC 9112 Section 6.1: If no Transfer-Encoding or Content-Length header is present,
+            # the message body is considered to be empty.
+            return None
 
         if chunked:
             # two potentially dangerous cases:

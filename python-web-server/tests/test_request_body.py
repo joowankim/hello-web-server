@@ -30,7 +30,6 @@ def socket_reader(request: pytest.FixtureRequest) -> SocketReader:
         ),
         ((1, 1), [("Content-Length", "0")], b"\r\n", b""),
         ((1, 0), [("Content-Length", "0")], b"\r\n", b""),
-        ((1, 1), [], b"", b""),
         ((1, 0), [], b"", b""),
     ],
     indirect=["socket_reader"],
@@ -46,6 +45,19 @@ def test_create(
     )
 
     assert body.read() == expected
+
+
+@pytest.mark.parametrize(
+    "socket_reader",
+    [b"", b"\r\n", b"\r\n\r\n", b"\r\n\r\nGET / HTTP/1.1\r\nHost: example.com\r\n\r\n"],
+    indirect=["socket_reader"],
+)
+def test_create_with_empty_body(socket_reader: SocketReader):
+    body = RequestBody.create(
+        protocol_version=(1, 1), headers=[], socket_reader=socket_reader
+    )
+
+    assert body is None
 
 
 @pytest.mark.parametrize(
