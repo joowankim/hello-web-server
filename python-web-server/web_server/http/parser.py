@@ -1,8 +1,9 @@
 import re
+from collections.abc import Generator
 from typing import ClassVar
 
 from web_server import config
-from web_server.http import reader
+from web_server.http import reader, message, body
 from web_server.http.errors import (
     InvalidHTTPVersion,
     InvalidRequestLine,
@@ -27,6 +28,21 @@ class RequestParser:
     def __init__(self, cfg: config.MessageConfig, socket_reader: reader.SocketReader):
         self.cfg = cfg
         self.reader = socket_reader
+
+    def parse(self) -> Generator[message.Request, None, None]:
+        method, (path, query, fragment), version = self.parse_request_line()
+        headers = self.parse_headers()
+        req_body = body.RequestBody.create(version, headers, self.reader)
+        if req_body is not None and isinstance(req_body.reader, reader.ChunkedReader):
+            headers += req_body.reader.trailers
+        yield message.Request(
+            method=method,
+            path=path,
+            query=query,
+            fragment=fragment,
+            headers=headers,
+            body=req_body,
+        )
 
     def parse_request_line(self) -> tuple[str, tuple[str, str, str], tuple[int, int]]:
         line = self.reader.read_until(b"\r\n", self.cfg.limit_request_line)
@@ -80,7 +96,7 @@ class RequestParser:
         headers = []
 
         while True:
-            if len(headers) >= self.cfg.limit_request_fields:
+            if len(headers) > self.cfg.limit_request_fields:
                 raise LimitRequestHeaders("limit request headers fields")
             header_line = self.reader.read_until(b"\r\n")
             if header_line == b"\r\n":

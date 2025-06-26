@@ -160,17 +160,17 @@ def test_parse_request_line_with_invalid_stream(
         ),
         (
             (
-                dict(limit_request_fields=2),
+                dict(limit_request_fields=3),
                 b"Header1: Value1\r\nHeader2: Value2\r\nHeader3: Value3\r\n\r\n",
             ),
-            [("Header1", "Value1"), ("Header2", "Value2")],
+            [("Header1", "Value1"), ("Header2", "Value2"), ("Header3", "Value3")],
         ),
         (
             (
-                dict(limit_request_field_size=10),
+                dict(limit_request_field_size=100),
                 b"Short: Value\r\nLongHeaderName: LongValueThatExceedsLimit\r\n\r\n",
             ),
-            [("Short", "Value")],
+            [("Short", "Value"), ("LongHeaderName", "LongValueThatExceedsLimit")],
         ),
     ],
     indirect=["request_parser"],
@@ -208,3 +208,138 @@ def test_parse_headers_with_invalid_stream(
 ):
     with pytest.raises(error_type, match=error_message):
         request_parser.parse_headers()
+
+
+@pytest.mark.parametrize(
+    "request_parser, expected_list",
+    [
+        (
+            (
+                dict(),
+                b"GET / HTTP/1.1\r\nHost: example.com\r\nContent-Length: 13\r\n\r\nHello, World!",
+            ),
+            [
+                (
+                    "GET",
+                    ("/", "", ""),
+                    [("Host", "example.com"), ("Content-Length", "13")],
+                    b"Hello, World!",
+                ),
+            ],
+        ),
+        (
+            (
+                dict(),
+                b"POST /upload HTTP/1.1\r\nHost: example.com\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nHello\r\n3\r\n, W\r\n5\r\norld!\r\n0\r\n\r\n",
+            ),
+            [
+                (
+                    "POST",
+                    ("/upload", "", ""),
+                    [("Host", "example.com"), ("Transfer-Encoding", "chunked")],
+                    b"Hello, World!",
+                ),
+            ],
+        ),
+        (
+            (dict(), b"PUT /update HTTP/1.0\r\nHost: example.com\r\n\r\n"),
+            [
+                ("PUT", ("/update", "", ""), [("Host", "example.com")], b""),
+            ],
+        ),
+        (
+            (
+                dict(),
+                b"POST /first HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nhello\r\n0\r\n\r\nPOST /second HTTP/1.1\r\nContent-Length: 5\r\n\r\nHello\r\n\r\n",
+            ),
+            [
+                (
+                    "POST",
+                    ("/first", "", ""),
+                    [("Transfer-Encoding", "chunked")],
+                    b"hello",
+                ),
+                (
+                    "POST",
+                    ("/second", "", ""),
+                    [("Content-Length", "5")],
+                    b"Hello",
+                ),
+            ],
+        ),
+    ],
+    indirect=["request_parser"],
+)
+def test_parse(
+    request_parser: RequestParser,
+    expected_list: list[tuple[str, str, list[tuple[str, str]], bytes]],
+):
+    for req, expected in zip(request_parser.parse(), expected_list):
+        method, (path, query, fragment), headers, body = expected
+
+        assert req.method == method
+        assert req.path == path
+        assert req.query == query
+        assert req.fragment == fragment
+        assert req.headers == headers
+        assert req.body.read() == body
+
+
+@pytest.mark.parametrize(
+    "request_parser, expected_list",
+    [
+        (
+            (dict(), b"POST /submit HTTP/1.1\r\nHost: example.com\r\n\r\n"),
+            [
+                (
+                    "POST",
+                    ("/submit", "", ""),
+                    [("Host", "example.com")],
+                    None,
+                ),
+            ],
+        ),
+        (
+            (dict(), b"DELETE /delete HTTP/1.1\r\nHost: example.com\r\n\r\n"),
+            [
+                (
+                    "DELETE",
+                    ("/delete", "", ""),
+                    [("Host", "example.com")],
+                    None,
+                ),
+            ],
+        ),
+        (
+            (dict(), b"GET /first HTTP/1.1\r\n\r\nGET /second HTTP/1.1\r\n\r\n"),
+            [
+                (
+                    "GET",
+                    ("/first", "", ""),
+                    [],
+                    None,
+                ),
+                (
+                    "GET",
+                    ("/second", "", ""),
+                    [],
+                    None,
+                ),
+            ],
+        ),
+    ],
+    indirect=["request_parser"],
+)
+def test_parse_with_empty_body(
+    request_parser: RequestParser,
+    expected_list: list[tuple[str, str, list[tuple[str, str]], None]],
+):
+    for req, expected in zip(request_parser.parse(), expected_list):
+        method, (path, query, fragment), headers, body = expected
+
+        assert req.method == method
+        assert req.path == path
+        assert req.query == query
+        assert req.fragment == fragment
+        assert req.headers == headers
+        assert req.body == body

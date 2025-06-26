@@ -1,4 +1,21 @@
-import re
+from collections.abc import Sequence
 
-RFC9110_5_6_2_TOKEN_SPECIALS = r"!#$%&'*+-.^_`|~"
-TOKEN_PATTERN = re.compile(rf"[{re.escape(RFC9110_5_6_2_TOKEN_SPECIALS)}\w]+")
+from web_server.http.body import RequestBody
+
+
+class Request:
+    def __init__(
+        self,
+        method: str,
+        path: str,
+        query: str,
+        fragment: str,
+        headers: Sequence[tuple[str, str]],
+        body: RequestBody | None,
+    ):
+        self.method = method
+        self.path = path
+        self.query = query
+        self.fragment = fragment
+        self.headers = headers
+        self.body = body
