@@ -16,6 +16,17 @@ from web_server.http.errors import (
 from web_server.util import split_request_uri, bytes_to_str
 
 
+def should_close(version: tuple[int, int], headers: list[tuple[str, str]]) -> bool:
+    upper_headers = set((h.upper(), v.upper()) for h, v in headers)
+    if version < (1, 1):
+        if ("CONNECTION", "KEEP-ALIVE") in upper_headers:
+            return False
+        return True
+    if ("CONNECTION", "CLOSE") in upper_headers:
+        return True
+    return False
+
+
 class RequestParser:
     PROTOCOL_VERSION_TOKEN: ClassVar[re.Pattern] = re.compile(
         r"HTTP/(?P<major>\d+)\.(?P<minor>\d+)"
@@ -49,7 +60,7 @@ class RequestParser:
                 body=req_body or body.RequestBody(io.BytesIO(b"")),
                 version=version,
             )
-            if ("CONNECTION", "close") in [(h.upper(), v.lower()) for h, v in headers]:
+            if should_close(version, headers):
                 break
 
     def parse_request_line(self) -> tuple[str, tuple[str, str, str], tuple[int, int]]:

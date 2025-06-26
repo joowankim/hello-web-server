@@ -21,5 +21,4 @@ def test_http_parser(fname):
 
     print(fname)
     for case in req.gen_cases(cfg):
-        print(case[0].description)
         case[0](*case[1:])

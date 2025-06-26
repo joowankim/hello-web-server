@@ -13,7 +13,7 @@ from web_server.http.errors import (
     LimitRequestLine,
     LimitRequestHeaders,
 )
-from web_server.http.parser import RequestParser
+from web_server.http.parser import RequestParser, should_close
 from web_server.http.reader import SocketReader
 
 
@@ -391,3 +391,32 @@ def test_parse_with_empty_body(
         assert req.version == version
         assert req.headers == headers
         assert req.body.read() == body
+
+
+@pytest.mark.parametrize(
+    "version, headers, expected",
+    [
+        ((1, 0), [("CONNECTION", "close")], True),
+        ((1, 0), [("CONNECTION", "Keep-Alive")], False),
+        ((1, 0), [("CONTENT-LENGTH", "12")], True),
+        ((1, 0), [], True),
+        ((1, 0), [("CONNECTION", "close"), ("TRANSFER-ENCODING", "chunked")], True),
+        ((1, 0), [("TRANSFER-ENCODING", "chunked")], True),
+        ((1, 1), [("CONNECTION", "close")], True),
+        ((1, 1), [("CONNECTION", "Keep-Alive")], False),
+        ((1, 1), [], False),
+        ((1, 1), [("CONTENT-LENGTH", "12")], False),
+        ((1, 1), [("TRANSFER-ENCODING", "chunked")], False),
+        ((1, 1), [("CONNECTION", "close"), ("TRANSFER-ENCODING", "chunked")], True),
+        ((2, 0), [("CONNECTION", "close")], True),
+        ((2, 0), [("CONNECTION", "Keep-Alive")], False),
+        ((2, 0), [], False),
+        ((2, 0), [("CONTENT-LENGTH", "12")], False),
+        ((2, 0), [("TRANSFER-ENCODING", "chunked")], False),
+        ((2, 0), [("CONNECTION", "close"), ("TRANSFER-ENCODING", "chunked")], True),
+    ],
+)
+def test_should_close(
+    version: tuple[int, int], headers: list[tuple[str, str]], expected: bool
+):
+    assert should_close(version=version, headers=headers) is expected
