@@ -222,6 +222,7 @@ def test_parse_headers_with_invalid_stream(
                 (
                     "GET",
                     ("/", "", ""),
+                    (1, 1),
                     [("Host", "example.com"), ("Content-Length", "13")],
                     b"Hello, World!",
                 ),
@@ -236,6 +237,7 @@ def test_parse_headers_with_invalid_stream(
                 (
                     "POST",
                     ("/upload", "", ""),
+                    (1, 1),
                     [("Host", "example.com"), ("Transfer-Encoding", "chunked")],
                     b"Hello, World!",
                 ),
@@ -244,7 +246,7 @@ def test_parse_headers_with_invalid_stream(
         (
             (dict(), b"PUT /update HTTP/1.0\r\nHost: example.com\r\n\r\n"),
             [
-                ("PUT", ("/update", "", ""), [("Host", "example.com")], b""),
+                ("PUT", ("/update", "", ""), (1, 0), [("Host", "example.com")], b""),
             ],
         ),
         (
@@ -256,12 +258,14 @@ def test_parse_headers_with_invalid_stream(
                 (
                     "POST",
                     ("/first", "", ""),
+                    (1, 1),
                     [("Transfer-Encoding", "chunked")],
                     b"hello",
                 ),
                 (
                     "POST",
                     ("/second", "", ""),
+                    (1, 1),
                     [("Content-Length", "5")],
                     b"Hello",
                 ),
@@ -272,15 +276,18 @@ def test_parse_headers_with_invalid_stream(
 )
 def test_parse(
     request_parser: RequestParser,
-    expected_list: list[tuple[str, str, list[tuple[str, str]], bytes]],
+    expected_list: list[
+        tuple[str, tuple[str, str, str], str, list[tuple[int, int]], bytes]
+    ],
 ):
     for req, expected in zip(request_parser.parse(), expected_list):
-        method, (path, query, fragment), headers, body = expected
+        method, (path, query, fragment), version, headers, body = expected
 
         assert req.method == method
         assert req.path == path
         assert req.query == query
         assert req.fragment == fragment
+        assert req.version == version
         assert req.headers == headers
         assert req.body.read() == body
 
@@ -294,6 +301,7 @@ def test_parse(
                 (
                     "POST",
                     ("/submit", "", ""),
+                    (1, 1),
                     [("Host", "example.com")],
                     None,
                 ),
@@ -305,6 +313,7 @@ def test_parse(
                 (
                     "DELETE",
                     ("/delete", "", ""),
+                    (1, 1),
                     [("Host", "example.com")],
                     None,
                 ),
@@ -316,12 +325,14 @@ def test_parse(
                 (
                     "GET",
                     ("/first", "", ""),
+                    (1, 1),
                     [],
                     None,
                 ),
                 (
                     "GET",
                     ("/second", "", ""),
+                    (1, 1),
                     [],
                     None,
                 ),
@@ -332,14 +343,17 @@ def test_parse(
 )
 def test_parse_with_empty_body(
     request_parser: RequestParser,
-    expected_list: list[tuple[str, str, list[tuple[str, str]], None]],
+    expected_list: list[
+        tuple[str, tuple[str, str, str], str, list[tuple[int, int]], None]
+    ],
 ):
     for req, expected in zip(request_parser.parse(), expected_list):
-        method, (path, query, fragment), headers, body = expected
+        method, (path, query, fragment), version, headers, body = expected
 
         assert req.method == method
         assert req.path == path
         assert req.query == query
         assert req.fragment == fragment
+        assert req.version == version
         assert req.headers == headers
         assert req.body == body

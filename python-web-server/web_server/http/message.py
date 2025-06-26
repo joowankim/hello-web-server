@@ -10,6 +10,7 @@ class Request:
         path: str,
         query: str,
         fragment: str,
+        version: tuple[int, int],
         headers: Sequence[tuple[str, str]],
         body: RequestBody | None,
     ):
@@ -17,5 +18,6 @@ class Request:
         self.path = path
         self.query = query
         self.fragment = fragment
+        self.version = version
         self.headers = headers
         self.body = body

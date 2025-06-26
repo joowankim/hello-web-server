@@ -42,6 +42,7 @@ class RequestParser:
             fragment=fragment,
             headers=headers,
             body=req_body,
+            version=version,
         )
 
     def parse_request_line(self) -> tuple[str, tuple[str, str, str], tuple[int, int]]:
