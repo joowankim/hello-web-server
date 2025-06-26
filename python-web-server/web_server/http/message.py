@@ -12,7 +12,7 @@ class Request:
         fragment: str,
         version: tuple[int, int],
         headers: Sequence[tuple[str, str]],
-        body: RequestBody | None,
+        body: RequestBody,
     ):
         self.method = method
         self.path = path

@@ -142,35 +142,49 @@ def test_parse_request_line_with_invalid_stream(
                 dict(),
                 b"Host: example.com\r\nContent-Length: 13\r\n\r\nHello, World!",
             ),
-            [("Host", "example.com"), ("Content-Length", "13")],
+            [("HOST", "example.com"), ("CONTENT-LENGTH", "13")],
         ),
         (
             (
                 dict(),
                 b"User-Agent: TestAgent/1.0\r\nAccept: */*\r\n\r\n",
             ),
-            [("User-Agent", "TestAgent/1.0"), ("Accept", "*/*")],
+            [("USER-AGENT", "TestAgent/1.0"), ("ACCEPT", "*/*")],
         ),
         (
             (
                 dict(),
                 b"X-Custom-Header: Value\r\nX-Another-Header: AnotherValue\r\n\r\n",
             ),
-            [("X-Custom-Header", "Value"), ("X-Another-Header", "AnotherValue")],
+            [("X-CUSTOM-HEADER", "Value"), ("X-ANOTHER-HEADER", "AnotherValue")],
         ),
         (
             (
                 dict(limit_request_fields=3),
                 b"Header1: Value1\r\nHeader2: Value2\r\nHeader3: Value3\r\n\r\n",
             ),
-            [("Header1", "Value1"), ("Header2", "Value2"), ("Header3", "Value3")],
+            [("HEADER1", "Value1"), ("HEADER2", "Value2"), ("HEADER3", "Value3")],
         ),
         (
             (
                 dict(limit_request_field_size=100),
                 b"Short: Value\r\nLongHeaderName: LongValueThatExceedsLimit\r\n\r\n",
             ),
-            [("Short", "Value"), ("LongHeaderName", "LongValueThatExceedsLimit")],
+            [("SHORT", "Value"), ("LONGHEADERNAME", "LongValueThatExceedsLimit")],
+        ),
+        (
+            (
+                dict(),
+                b"Transfer-Encoding: identity\r\nTransfer-Encoding: chunked\r\n\r\n",
+            ),
+            [("TRANSFER-ENCODING", "identity"), ("TRANSFER-ENCODING", "chunked")],
+        ),
+        (
+            (
+                dict(),
+                b"Host: localhost\r\nName: \t value \t \r\n\r\n",
+            ),
+            [("HOST", "localhost"), ("NAME", "value")],
         ),
     ],
     indirect=["request_parser"],
@@ -223,7 +237,7 @@ def test_parse_headers_with_invalid_stream(
                     "GET",
                     ("/", "", ""),
                     (1, 1),
-                    [("Host", "example.com"), ("Content-Length", "13")],
+                    [("HOST", "example.com"), ("CONTENT-LENGTH", "13")],
                     b"Hello, World!",
                 ),
             ],
@@ -238,7 +252,7 @@ def test_parse_headers_with_invalid_stream(
                     "POST",
                     ("/upload", "", ""),
                     (1, 1),
-                    [("Host", "example.com"), ("Transfer-Encoding", "chunked")],
+                    [("HOST", "example.com"), ("TRANSFER-ENCODING", "chunked")],
                     b"Hello, World!",
                 ),
             ],
@@ -246,7 +260,7 @@ def test_parse_headers_with_invalid_stream(
         (
             (dict(), b"PUT /update HTTP/1.0\r\nHost: example.com\r\n\r\n"),
             [
-                ("PUT", ("/update", "", ""), (1, 0), [("Host", "example.com")], b""),
+                ("PUT", ("/update", "", ""), (1, 0), [("HOST", "example.com")], b""),
             ],
         ),
         (
@@ -259,15 +273,35 @@ def test_parse_headers_with_invalid_stream(
                     "POST",
                     ("/first", "", ""),
                     (1, 1),
-                    [("Transfer-Encoding", "chunked")],
+                    [("TRANSFER-ENCODING", "chunked")],
                     b"hello",
                 ),
                 (
                     "POST",
                     ("/second", "", ""),
                     (1, 1),
-                    [("Content-Length", "5")],
+                    [("CONTENT-LENGTH", "5")],
                     b"Hello",
+                ),
+            ],
+        ),
+        (
+            (
+                dict(),
+                (
+                    b"POST /first HTTP/1.1\r\nTransfer-Encoding: chunked\r\nConnection: Close\r\n\r\n"
+                    b"5\r\nhello\r\n0\r\n\r\n"
+                    b"POST /second HTTP/1.1\r\nContent-Length: 5\r\n\r\n"
+                    b"Hello\r\n\r\n"
+                ),
+            ),
+            [
+                (
+                    "POST",
+                    ("/first", "", ""),
+                    (1, 1),
+                    [("TRANSFER-ENCODING", "chunked"), ("CONNECTION", "Close")],
+                    b"hello",
                 ),
             ],
         ),
@@ -302,8 +336,8 @@ def test_parse(
                     "POST",
                     ("/submit", "", ""),
                     (1, 1),
-                    [("Host", "example.com")],
-                    None,
+                    [("HOST", "example.com")],
+                    b"",
                 ),
             ],
         ),
@@ -314,8 +348,8 @@ def test_parse(
                     "DELETE",
                     ("/delete", "", ""),
                     (1, 1),
-                    [("Host", "example.com")],
-                    None,
+                    [("HOST", "example.com")],
+                    b"",
                 ),
             ],
         ),
@@ -327,14 +361,14 @@ def test_parse(
                     ("/first", "", ""),
                     (1, 1),
                     [],
-                    None,
+                    b"",
                 ),
                 (
                     "GET",
                     ("/second", "", ""),
                     (1, 1),
                     [],
-                    None,
+                    b"",
                 ),
             ],
         ),
@@ -344,7 +378,7 @@ def test_parse(
 def test_parse_with_empty_body(
     request_parser: RequestParser,
     expected_list: list[
-        tuple[str, tuple[str, str, str], str, list[tuple[int, int]], None]
+        tuple[str, tuple[str, str, str], str, list[tuple[int, int]], bytes]
     ],
 ):
     for req, expected in zip(request_parser.parse(), expected_list):
@@ -356,4 +390,4 @@ def test_parse_with_empty_body(
         assert req.fragment == fragment
         assert req.version == version
         assert req.headers == headers
-        assert req.body == body
+        assert req.body.read() == body

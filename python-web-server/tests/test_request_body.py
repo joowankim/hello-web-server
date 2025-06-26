@@ -130,15 +130,20 @@ def test_create_with_invalid_request(
         )
 
 
+@pytest.fixture(params=[3, 8192])
+def socket_chunk_size(request: pytest.FixtureRequest) -> int:
+    return request.param
+
+
 @pytest.fixture
-def request_body(request: pytest.FixtureRequest) -> RequestBody:
+def request_body(socket_chunk_size: int, request: pytest.FixtureRequest) -> RequestBody:
     payload: bytes = request.param
     fake_sock = fake.FakeSocket(payload)
     fake_sock = cast(socket.socket, fake_sock)
     return RequestBody.create(
         protocol_version=(1, 1),
         headers=[("Content-Length", str(len(payload)))],
-        socket_reader=SocketReader(sock=fake_sock, max_chunk=8192),
+        socket_reader=SocketReader(sock=fake_sock, max_chunk=socket_chunk_size),
     )
 
 
@@ -189,6 +194,11 @@ def test_read_iteration(
         (b"abcdef", [2, 2, 2], [b"ab", b"cd", b"ef"]),
         (b"abc\ndefg\nhi", [1, None, None, None], [b"a", b"bc\n", b"defg\n", b"hi"]),
         (b"abc\ndef", [1, 2, 2, 2, 2], [b"a", b"bc", b"\n", b"de", b"f"]),
+        (
+            b"GET /second HTTP/1.1\r\n\r\n",
+            [None, None],
+            [b"GET /second HTTP/1.1\r\n", b"\r\n"],
+        ),
     ],
     indirect=["request_body"],
 )

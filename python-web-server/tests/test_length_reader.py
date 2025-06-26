@@ -7,13 +7,20 @@ from tests import fake
 from web_server.http.reader import LengthReader, SocketReader
 
 
+@pytest.fixture(params=[3, 8192])
+def socket_chunk_size(request: pytest.FixtureRequest) -> int:
+    return request.param
+
+
 @pytest.fixture
-def length_reader(request: pytest.FixtureRequest) -> LengthReader:
+def length_reader(
+    socket_chunk_size: int, request: pytest.FixtureRequest
+) -> LengthReader:
     payload: bytes = request.param
     fake_sock = fake.FakeSocket(payload)
     fake_sock = cast(socket.socket, fake_sock)
     return LengthReader(
-        socket_reader=SocketReader(sock=fake_sock, max_chunk=8192),
+        socket_reader=SocketReader(sock=fake_sock, max_chunk=socket_chunk_size),
         length=len(payload),
     )
 

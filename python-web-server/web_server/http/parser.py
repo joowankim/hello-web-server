@@ -1,3 +1,4 @@
+import io
 import re
 from collections.abc import Generator
 from typing import ClassVar
@@ -30,20 +31,26 @@ class RequestParser:
         self.reader = socket_reader
 
     def parse(self) -> Generator[message.Request, None, None]:
-        method, (path, query, fragment), version = self.parse_request_line()
-        headers = self.parse_headers()
-        req_body = body.RequestBody.create(version, headers, self.reader)
-        if req_body is not None and isinstance(req_body.reader, reader.ChunkedReader):
-            headers += req_body.reader.trailers
-        yield message.Request(
-            method=method,
-            path=path,
-            query=query,
-            fragment=fragment,
-            headers=headers,
-            body=req_body,
-            version=version,
-        )
+        while self.reader.read(1):
+            self.reader.unread(1)
+            method, (path, query, fragment), version = self.parse_request_line()
+            headers = self.parse_headers()
+            req_body = body.RequestBody.create(version, headers, self.reader)
+            if req_body is not None and isinstance(
+                req_body.reader, reader.ChunkedReader
+            ):
+                headers += req_body.reader.trailers
+            yield message.Request(
+                method=method,
+                path=path,
+                query=query,
+                fragment=fragment,
+                headers=headers,
+                body=req_body or body.RequestBody(io.BytesIO(b"")),
+                version=version,
+            )
+            if ("CONNECTION", "close") in [(h.upper(), v.lower()) for h, v in headers]:
+                break
 
     def parse_request_line(self) -> tuple[str, tuple[str, str, str], tuple[int, int]]:
         line = self.reader.read_until(b"\r\n", self.cfg.limit_request_line)
@@ -107,5 +114,7 @@ class RequestParser:
             header_parts = header_line.decode().strip().split(": ", 1)
             if len(header_parts) != 2:
                 raise InvalidHeader(header_line)
-            headers.append((header_parts[0], header_parts[1]))
+            headers.append(
+                (header_parts[0].upper().rstrip(" \t"), header_parts[1].strip(" \t"))
+            )
         return headers

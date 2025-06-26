@@ -8,13 +8,20 @@ from tests import fake
 from web_server.http.reader import EOFReader, SocketReader
 
 
+@pytest.fixture(params=[3, 8192])
+def socket_chunk_size(request: pytest.FixtureRequest) -> int:
+    return request.param
+
+
 @pytest.fixture
-def eof_reader(request: pytest.FixtureRequest) -> EOFReader:
+def eof_reader(socket_chunk_size: int, request: pytest.FixtureRequest) -> EOFReader:
     payload: bytes = request.param
     fake_sock = fake.FakeSocket(payload)
     fake_sock.recv = mock.Mock(side_effect=iter(payload.split(b" ")))
     fake_sock = cast(socket.socket, fake_sock)
-    return EOFReader(socket_reader=SocketReader(fake_sock))
+    return EOFReader(
+        socket_reader=SocketReader(sock=fake_sock, max_chunk=socket_chunk_size)
+    )
 
 
 @pytest.mark.parametrize(

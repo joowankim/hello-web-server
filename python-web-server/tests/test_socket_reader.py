@@ -124,6 +124,11 @@ def socket_reader(
             [(b"\r\n\r\n", 5), (b"\r\n\r\n", None), (b"\r\n\r\n", None)],
             [b"Hello", b", World!\r\n\r\n", b""],
         ),
+        (
+            (b"GET / HTTP/1.0\r\nSomeheader: 0X0Vfv\r\n\r\n", 100),
+            [(b"\r\n", 100), (b"\r\n", None), (b"\r\n", None)],
+            [b"GET / HTTP/1.0\r\n", b"Someheader: 0X0Vfv\r\n", b"\r\n"],
+        ),
     ],
     indirect=["socket_reader"],
 )

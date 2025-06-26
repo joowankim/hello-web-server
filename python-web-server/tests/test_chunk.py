@@ -51,12 +51,16 @@ def socket_reader(
             [(b"hello", 5), (b" world", 6), (b"", 0)],
         ),
         (
-            (b"5\r\nhello\r\n6\r\n world\r\n000\r\n\r\nGET /second HTTP/1.1\r\n\r\n"),
+            b"5\r\nhello\r\n6\r\n world\r\n000\r\n\r\nGET /second HTTP/1.1\r\n\r\n",
             [(b"hello", 5), (b" world", 6), (b"", 0)],
         ),
         (
             b"b\r\nhello world\r\n0\r\n\r\n",
             [(b"hello world", 11), (b"", 0)],
+        ),
+        (
+            b"5\r\nhello\r\n000\r\n",
+            [(b"hello", 5), (b"", 0)],
         ),
     ],
     indirect=["socket_reader"],
@@ -66,6 +70,7 @@ def socket_reader(
         "chunks_with_chunk_extensions",
         "chunks_with_next_request",
         "single_chunk_with_hexadecimal_size",
+        "chunk_end_without_duplicated_crlf",
     ),
 )
 def test_from_socket_reader(

@@ -55,14 +55,14 @@ class SocketReader:
             data = self.buf.read()
             read_length += len(data)
 
-            if limit is not None and read_length >= limit:
-                self._read_cursor += limit
-                return data[:limit]
-
             if (target_index := data.find(target)) != -1:
                 target_next_index = target_index + len(target)
                 self._read_cursor += target_next_index
                 return data[:target_next_index]
+
+            if limit is not None and read_length >= limit:
+                self._read_cursor += limit
+                return data[:limit]
 
             self.buf.seek(0, io.SEEK_END)
             chunk = self.chunk()
@@ -95,7 +95,16 @@ class LengthReader(BodyReader):
             return b""
 
         self.length -= size
-        return self.socket_reader.read(size)
+        buf = io.BytesIO()
+        data = self.socket_reader.read()
+        while data:
+            buf.write(data)
+            if buf.tell() > size:
+                break
+            data = self.socket_reader.read()
+        ret, rest = buf.getvalue()[:size], buf.getvalue()[size:]
+        self.socket_reader.unread(len(rest))
+        return ret
 
 
 class Chunk:
@@ -151,7 +160,10 @@ class Chunk:
             chunk_start = size_end_idx + crlf_length
             chunk_end = size_end_idx + crlf_length + size
             while chunk_end + crlf_length > buf.tell():
-                buf.write(socket_reader.read())
+                data = socket_reader.read()
+                if not data:
+                    break
+                buf.write(data)
             if size == 0:
                 chunk_end = buf.getvalue().find(cls.CRLF + cls.CRLF)
                 while chunk_end == cls.CRLF_NOT_FOUND:

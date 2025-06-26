@@ -1,23 +1,27 @@
 import tempfile
+from collections.abc import Iterable
 
 
 class FakeSocket:
-    def __init__(self, data: bytes):
-        self.tmp = tempfile.TemporaryFile()
-        if data:
+    def __init__(self, data: bytes | Iterable[bytes]):
+        if isinstance(data, bytes):
+            self.tmp = tempfile.TemporaryFile()
             self.tmp.write(data)
             self.tmp.flush()
             self.tmp.seek(0)
-
-    def fileno(self) -> int:
-        return self.tmp.fileno()
+        else:
+            self.iter = iter(data)
 
     def recv(self, length: int | None = None) -> bytes:
-        return self.tmp.read(length)
-
-    def send(self, data: bytes) -> None:
-        self.tmp.write(data)
-        self.tmp.flush()
-
-    def seek(self, offset: int, whence: int = 0) -> None:
-        self.tmp.seek(offset, whence)
+        if hasattr(self, "tmp"):
+            return self.tmp.read(length)
+        elif hasattr(self, "iter"):
+            if not self.iter:
+                return b""
+            try:
+                return next(self.iter)
+            except StopIteration:
+                self.iter = None
+                return b""
+        else:
+            return b""
