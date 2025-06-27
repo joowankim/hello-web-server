@@ -186,6 +186,13 @@ def test_parse_request_line_with_invalid_stream(
             ),
             [("HOST", "localhost"), ("NAME", "value")],
         ),
+        (
+            (
+                dict(),
+                b"Header1:Value1\r\nHeader2: Value2\r\nHeader3:Value3\r\n\r\n",
+            ),
+            [("HEADER1", "Value1"), ("HEADER2", "Value2"), ("HEADER3", "Value3")],
+        ),
     ],
     indirect=["request_parser"],
 )
