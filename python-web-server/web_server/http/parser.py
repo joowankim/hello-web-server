@@ -11,6 +11,7 @@ from web_server.http.errors import (
     LimitRequestLine,
     InvalidHeader,
     LimitRequestHeaders,
+    InvalidHeaderName,
 )
 from web_server.util import split_request_uri, bytes_to_str
 
@@ -124,7 +125,8 @@ class RequestParser:
             header_parts = bytes_to_str(header_line).strip().split(":", 1)
             if len(header_parts) != 2:
                 raise InvalidHeader(header_line)
-            headers.append(
-                (header_parts[0].upper().rstrip(" \t"), header_parts[1].strip(" \t"))
-            )
+            raw_header = (header_parts[0].rstrip(" \t"), header_parts[1].strip(" \t"))
+            if not self.TOKEN_PATTERN.fullmatch(raw_header[0]):
+                raise InvalidHeaderName(raw_header[0])
+            headers.append((raw_header[0].upper(), raw_header[1]))
         return headers

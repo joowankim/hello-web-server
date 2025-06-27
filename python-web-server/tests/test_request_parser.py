@@ -12,6 +12,7 @@ from web_server.http.errors import (
     InvalidHTTPVersion,
     LimitRequestLine,
     LimitRequestHeaders,
+    InvalidHeaderName,
 )
 from web_server.http.parser import RequestParser, should_close
 from web_server.http.reader import SocketReader
@@ -230,6 +231,14 @@ def test_parse_headers(request_parser: RequestParser, expected: list[tuple[str, 
             ),
             LimitRequestHeaders,
             "limit request header field size",
+        ),
+        (
+            (
+                dict(),
+                "Content-Lengthß: 3\r\nContent-Length: 3\r\n\r\nÄÄÄ".encode("latin1"),
+            ),
+            InvalidHeaderName,
+            "Invalid HTTP header name: 'Content-Lengthß'",
         ),
     ],
     indirect=["request_parser"],
