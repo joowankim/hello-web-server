@@ -16,12 +16,13 @@ def socket_reader(request: pytest.FixtureRequest) -> SocketReader:
 
 
 @pytest.mark.parametrize(
-    "socket_reader, expected_data, expected_trailers",
+    "socket_reader, expected_data, expected_trailers, expected_rest",
     [
         (
             (b"5\r\nhello\r\n6\r\n world\r\n0\r\n\r\n"),
             b"hello world",
             [],
+            b"",
         ),
         (
             (
@@ -30,6 +31,7 @@ def socket_reader(request: pytest.FixtureRequest) -> SocketReader:
             ),
             b"hello world",
             [("Vary", "*"), ("Content-Type", "text/plain")],
+            b"",
         ),
         (
             (
@@ -39,6 +41,13 @@ def socket_reader(request: pytest.FixtureRequest) -> SocketReader:
             ),
             b"hello world",
             [],
+            b"",
+        ),
+        (
+            (b"5\r\nhello\r\n6\r\n world\r\n000\r\n\r\nGET /second HTTP/1.1\r\n\r\n"),
+            b"hello world",
+            [],
+            b"GET /second HTTP/1.1\r\n\r\n",
         ),
     ],
     indirect=["socket_reader"],
@@ -47,11 +56,13 @@ def test_parse_chunked(
     socket_reader: SocketReader,
     expected_data: bytes,
     expected_trailers: list[tuple[str, str]],
+    expected_rest: bytes,
 ):
     reader = ChunkedReader.parse_chunked(socket_reader)
 
     assert reader.buf.read() == expected_data
     assert reader.trailers == expected_trailers
+    assert socket_reader.read() == expected_rest[: socket_reader.max_chunk]
 
 
 @pytest.fixture

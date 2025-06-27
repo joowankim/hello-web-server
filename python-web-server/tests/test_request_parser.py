@@ -337,6 +337,7 @@ def test_parse(
     ],
 ):
     reqs = list(request_parser.parse())
+    assert len(reqs) == len(expected_list)
 
     for req, expected in zip(reqs, expected_list):
         method, (path, query, fragment), version, headers, body = expected

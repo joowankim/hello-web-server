@@ -25,11 +25,12 @@ def socket_reader(
 
 
 @pytest.mark.parametrize(
-    "socket_reader, expected",
+    "socket_reader, expected, expected_rest",
     [
         (
             b"5\r\nhello\r\n6\r\n world\r\n0\r\n\r\n",
             [(b"hello", 5), (b" world", 6), (b"", 0)],
+            b"",
         ),
         (
             (
@@ -39,8 +40,9 @@ def socket_reader(
             [
                 (b"hello", 5),
                 (b" world", 6),
-                (b"Vary: *\r\nContent-Type: text/plain", 0),
+                (b"Vary: *\r\nContent-Type: text/plain\r\n", 0),
             ],
+            b"",
         ),
         (
             (
@@ -49,18 +51,22 @@ def socket_reader(
                 b"0\r\n\r\n"
             ),
             [(b"hello", 5), (b" world", 6), (b"", 0)],
+            b"",
         ),
         (
             b"5\r\nhello\r\n6\r\n world\r\n000\r\n\r\nGET /second HTTP/1.1\r\n\r\n",
             [(b"hello", 5), (b" world", 6), (b"", 0)],
+            b"GET /second HTTP/1.1\r\n\r\n",
         ),
         (
             b"b\r\nhello world\r\n0\r\n\r\n",
             [(b"hello world", 11), (b"", 0)],
+            b"",
         ),
         (
             b"5\r\nhello\r\n000\r\n",
             [(b"hello", 5), (b"", 0)],
+            b"",
         ),
     ],
     indirect=["socket_reader"],
@@ -74,13 +80,14 @@ def socket_reader(
     ),
 )
 def test_from_socket_reader(
-    socket_reader: SocketReader, expected: list[tuple[bytes, int]]
+    socket_reader: SocketReader, expected: list[tuple[bytes, int]], expected_rest: bytes
 ):
     chunks = Chunk.from_socket_reader(socket_reader)
 
     for chunk, (data, size) in zip(chunks, expected):
         assert chunk.data.read() == data
         assert chunk.size == size
+    assert socket_reader.read() == expected_rest[: socket_reader.max_chunk]
 
 
 @pytest.mark.parametrize(
@@ -125,14 +132,14 @@ def test_is_last():
         (Chunk(data=io.BytesIO(b"hello"), size=5), []),
         (
             Chunk(
-                data=io.BytesIO(b"Vary: *\r\nContent-Type: text/plain"),
+                data=io.BytesIO(b"Vary: *\r\nContent-Type: text/plain\r\n"),
                 size=0,
             ),
             [("Vary", "*"), ("Content-Type", "text/plain")],
         ),
         (
             Chunk(
-                data=io.BytesIO(b"Trailer-Name: value\r\nAnother-Header: value2"),
+                data=io.BytesIO(b"Trailer-Name: value\r\nAnother-Header: value2\r\n"),
                 size=0,
             ),
             [("Trailer-Name", "value"), ("Another-Header", "value2")],

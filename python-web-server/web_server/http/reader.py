@@ -143,46 +143,34 @@ class Chunk:
     def from_socket_reader(
         cls, socket_reader: SocketReader
     ) -> Generator[Self, None, None]:
-        buf = io.BytesIO()
-        crlf_length = len(cls.CRLF)
-
         while True:
-            stream = socket_reader.read()
-            buf.write(stream)
-            size_end_idx = buf.getvalue().find(cls.CRLF)
-            while size_end_idx == cls.CRLF_NOT_FOUND:
-                stream = socket_reader.read()
-                if not stream:
-                    break
-                buf.write(stream)
-                size_end_idx = buf.getvalue().find(cls.CRLF)
-            size_line = buf.getvalue()[:size_end_idx]
-            chunk_size, *_ = size_line.split(b";", 1)
+            buf = io.BytesIO()
+            chunk_size_line = socket_reader.read_until(cls.CRLF).replace(cls.CRLF, b"")
+            chunk_size, *_ = chunk_size_line.split(b";", 1)
             if not chunk_size or any(
                 n not in b"0123456789abcdefABCDEF" for n in chunk_size
             ):
                 raise InvalidChunkSize(chunk_size)
             size = int(chunk_size.rstrip(b" \t"), 16)
-            chunk_start = size_end_idx + crlf_length
-            chunk_end = size_end_idx + crlf_length + size
-            while chunk_end + crlf_length > buf.tell():
-                data = socket_reader.read()
-                if not data:
-                    break
-                buf.write(data)
             if size == 0:
-                chunk_end = buf.getvalue().find(cls.CRLF + cls.CRLF)
-                while chunk_end == cls.CRLF_NOT_FOUND:
-                    stream = socket_reader.read()
-                    if not stream:
+                content = b""
+                data = socket_reader.read_until(cls.CRLF)
+                while data != cls.CRLF:
+                    if data == b"":
                         break
-                    buf.write(stream)
-                    chunk_end = buf.getvalue().find(cls.CRLF + cls.CRLF)
-            yield cls(data=io.BytesIO(buf.getvalue()[chunk_start:chunk_end]), size=size)
+                    content += data
+                    data = socket_reader.read_until(cls.CRLF)
+            else:
+                content = socket_reader.read_until(cls.CRLF).replace(cls.CRLF, b"")
+                if size != len(content):
+                    raise InvalidHeader(
+                        f"Chunk size {size} does not match content length {len(content)}"
+                    )
+            buf.write(content)
+            buf.seek(0, io.SEEK_SET)
+            yield cls(data=buf, size=size)
             if size == 0:
                 break
-            buf = io.BytesIO(buf.getvalue()[chunk_end + crlf_length :])
-            buf.seek(0, os.SEEK_END)
 
 
 class ChunkedReader(BodyReader):
