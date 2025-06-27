@@ -31,30 +31,40 @@ def test_chunk(socket_reader_factory: SocketReaderFactory):
     assert socket_reader.chunk() == b""
 
 
-def test_reader_read_when_size_is_none(socket_reader_factory: SocketReaderFactory):
-    socket_reader = socket_reader_factory(b"qwerty123456", 5)
-
-    assert socket_reader.read(size=None) == b"qwert"
-    assert socket_reader.read(size=None) == b"y1234"
-    assert socket_reader.read(size=None) == b"56"
-    assert socket_reader.read(size=None) == b""
-
-
-def test_reader_read_zero_size(socket_reader_factory: SocketReaderFactory):
-    socket_reader = socket_reader_factory(b"qwertyasdfgh", 8192)
-
-    assert socket_reader.read(size=0) == b""
+@pytest.fixture
+def socket_reader(request: pytest.FixtureRequest) -> SocketReader:
+    payload, max_chunk = request.param
+    fake_sock = fake.FakeSocket(payload)
+    fake_sock = cast(socket.socket, fake_sock)
+    return SocketReader(sock=fake_sock, max_chunk=max_chunk)
 
 
-def test_reader_read_with_nonzero_size(socket_reader_factory: SocketReaderFactory):
-    socket_reader = socket_reader_factory(b"qwertyasdfghzxcvbn123456", 8192)
-
-    assert socket_reader.read(size=5) == b"qwert"
-    assert socket_reader.read(size=5) == b"yasdf"
-    assert socket_reader.read(size=5) == b"ghzxc"
-    assert socket_reader.read(size=5) == b"vbn12"
-    assert socket_reader.read(size=5) == b"3456"
-    assert socket_reader.read(size=5) == b""
+@pytest.mark.parametrize(
+    "socket_reader, sizes, expected_list",
+    [
+        (
+            (b"qwerty123456", 5),
+            [None, None, None, None],
+            [b"qwert", b"y1234", b"56", b""],
+        ),
+        (
+            (b"qwerty123456", 8192),
+            [0],
+            [b""],
+        ),
+        (
+            (b"qwertyasdfghzxcvbn123456", 8192),
+            [5, 5, 5, 5, 5, 5],
+            [b"qwert", b"yasdf", b"ghzxc", b"vbn12", b"3456", b""],
+        ),
+    ],
+    indirect=["socket_reader"],
+)
+def test_read(
+    socket_reader: SocketReader, sizes: list[int | None], expected_list: list[bytes]
+):
+    for size, expected in zip(sizes, expected_list):
+        assert socket_reader.read(size) == expected
 
 
 def test_unread(socket_reader_factory: SocketReaderFactory):
@@ -85,14 +95,6 @@ def test_unread_with_invalid_size(
 
     with pytest.raises(error_type, match=error_message):
         socket_reader.unread(size=size)
-
-
-@pytest.fixture
-def socket_reader(
-    socket_reader_factory: SocketReaderFactory, request: pytest.FixtureRequest
-) -> SocketReader:
-    payload, max_chunk = request.param
-    return socket_reader_factory(payload, max_chunk)
 
 
 @pytest.mark.parametrize(

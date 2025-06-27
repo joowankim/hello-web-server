@@ -97,7 +97,7 @@ class LengthReader(BodyReader):
             buf.write(data)
             if buf.tell() == length:
                 break
-            size -= buf.tell()
+            size -= len(data)
             data = socket_reader.read(size)
         if (d := socket_reader.read_until(b"\r\n\r\n")) != b"\r\n\r\n":
             socket_reader.unread(len(d))

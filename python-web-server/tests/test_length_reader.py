@@ -7,7 +7,7 @@ from tests import fake
 from web_server.http.reader import LengthReader, SocketReader
 
 
-@pytest.fixture(params=[3, 8192])
+@pytest.fixture(params=[1, 2, 3, 8192])
 def socket_chunk_size(request: pytest.FixtureRequest) -> int:
     return request.param
 

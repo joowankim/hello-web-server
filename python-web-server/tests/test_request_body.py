@@ -166,6 +166,7 @@ def request_body(socket_chunk_size: int, request: pytest.FixtureRequest) -> Requ
         (b"", None, b""),
         (b"", 0, b""),
         (b"", 5, b""),
+        (b"GET /second HTTP/1.1\r\n\r\n", 22, b"GET /second HTTP/1.1\r\n"),
     ],
     indirect=["request_body"],
 )
