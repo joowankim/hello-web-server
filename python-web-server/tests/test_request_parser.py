@@ -240,6 +240,14 @@ def test_parse_headers(request_parser: RequestParser, expected: list[tuple[str, 
             InvalidHeaderName,
             "Invalid HTTP header name: 'Content-Lengthß'",
         ),
+        (
+            (
+                dict(),
+                b"Header1 : Value1\r\n\r\n",
+            ),
+            InvalidHeaderName,
+            "Invalid HTTP header name: 'Header1 '",
+        ),
     ],
     indirect=["request_parser"],
 )
