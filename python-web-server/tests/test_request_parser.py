@@ -122,6 +122,16 @@ def test_parse_request_line(
             InvalidRequestLine,
             re.escape(r"Invalid HTTP request line: 'Host: example.com\r\n'"),
         ),
+        (
+            (
+                dict(),
+                "GETÿ /french.. HTTP/1.1\r\nContent-Length: 3\r\n\r\nÄÄÄ".encode(
+                    "latin1"
+                ),
+            ),
+            InvalidRequestMethod,
+            re.escape(r"Invalid HTTP method: 'GETÿ'"),
+        ),
     ],
     indirect=["request_parser"],
 )

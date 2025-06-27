@@ -32,7 +32,7 @@ class RequestParser:
     )
     RFC9110_5_6_2_TOKEN_SPECIALS: ClassVar[str] = r"!#$%&'*+-.^_`|~"
     TOKEN_PATTERN: ClassVar[re.Pattern] = re.compile(
-        rf"[{re.escape(RFC9110_5_6_2_TOKEN_SPECIALS)}\w]+"
+        rf"[{re.escape(RFC9110_5_6_2_TOKEN_SPECIALS)}0-9a-zA-Z]+"
     )
     METHOD_BADCHAR_RE: ClassVar[re.Pattern] = re.compile("[a-z#]")
 
