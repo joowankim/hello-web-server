@@ -2,7 +2,7 @@ import io
 import sys
 from typing import Self
 
-from web_server.http import reader, header
+from web_server.http import reader
 from web_server.http.errors import InvalidHeader, UnsupportedTransferCoding
 
 
@@ -42,19 +42,24 @@ class RequestBody:
             elif name == "TRANSFER-ENCODING":
                 # T-E can be a list
                 # https://datatracker.ietf.org/doc/html/rfc9112#name-transfer-encoding
-                vals = tuple(v.strip().lower() for v in value.split(","))
-                if not set(vals).issubset(set(header.TransferEncoding)):
-                    raise UnsupportedTransferCoding(value)
-                if len(set(vals)) != len(vals):
-                    raise InvalidHeader("TRANSFER-ENCODING")
-                if len(vals) == 1:
-                    if vals != (header.TransferEncoding.CHUNKED,):
-                        raise InvalidHeader("TRANSFER-ENCODING")
-                    chunked = True
-                elif len(vals) > 1:
-                    if vals[-1] != header.TransferEncoding.CHUNKED:
-                        raise InvalidHeader("TRANSFER-ENCODING")
-                    chunked = True
+                vals = [v.strip() for v in value.split(",")]
+                for val in vals:
+                    if val.lower() == "chunked":
+                        # DANGER: transfer codings stack, and stacked chunking is never intended
+                        if chunked:
+                            raise InvalidHeader("TRANSFER-ENCODING")
+                        chunked = True
+                    elif val.lower() == "identity":
+                        # does not do much, could still plausibly desync from what the proxy does
+                        # safe option: nuke it, its never needed
+                        if chunked:
+                            raise InvalidHeader("TRANSFER-ENCODING")
+                    elif val.lower() in ("compress", "deflate", "gzip"):
+                        # chunked should be the last one
+                        if chunked:
+                            raise InvalidHeader("TRANSFER-ENCODING")
+                    else:
+                        raise UnsupportedTransferCoding(value)
 
         if not chunked and content_length is None:
             # RFC 9112 Section 6.1: If no Transfer-Encoding or Content-Length header is present,
