@@ -14,25 +14,51 @@ def socket_chunk_size(request: pytest.FixtureRequest) -> int:
 
 
 @pytest.fixture
+def socket_reader(
+    socket_chunk_size: int, request: pytest.FixtureRequest
+) -> SocketReader:
+    payload: bytes = request.param
+    fake_sock = fake.FakeSocket(payload)
+    fake_sock = cast(socket.socket, fake_sock)
+    return SocketReader(sock=fake_sock, max_chunk=socket_chunk_size)
+
+
+@pytest.mark.parametrize(
+    "socket_reader, expected",
+    [
+        (b"hello world!\r\n\r\n", b"hello world!"),
+        (
+            b"hello world!\r\n\r\nGET /second HTTP/1.1\r\n\r\n",
+            b"hello world!",
+        ),
+    ],
+    indirect=["socket_reader"],
+)
+def test_parse_content(socket_reader: SocketReader, expected: bytes):
+    eof_reader = EOFReader.parse_content(socket_reader)
+
+    assert eof_reader.buf.read() == expected
+
+
+@pytest.fixture
 def eof_reader(socket_chunk_size: int, request: pytest.FixtureRequest) -> EOFReader:
     payload: bytes = request.param
     fake_sock = fake.FakeSocket(payload)
     fake_sock.recv = mock.Mock(side_effect=iter(payload.split(b" ")))
     fake_sock = cast(socket.socket, fake_sock)
-    return EOFReader(
-        socket_reader=SocketReader(sock=fake_sock, max_chunk=socket_chunk_size)
-    )
+    socket_reader = SocketReader(sock=fake_sock, max_chunk=socket_chunk_size)
+    return EOFReader.parse_content(socket_reader)
 
 
 @pytest.mark.parametrize(
     "eof_reader, sizes, expected_list",
     [
         (
-            b"Lorem ipsum dolor sit amet",
+            b"Lorem ipsum dolor sit amet\r\n\r\n",
             [5, 5, 3, 3, 100],
             [b"Lorem", b"ipsum", b"dol", b"ors", b"itamet"],
         ),
-        (b"12", [0, 5], [b"", b"12"]),
+        (b"12\r\n\r\n", [0, 5], [b"", b"12"]),
     ],
     indirect=["eof_reader"],
 )

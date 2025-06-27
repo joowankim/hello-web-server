@@ -220,8 +220,16 @@ class ChunkedReader(BodyReader):
 
 
 class EOFReader(BodyReader):
-    def __init__(self, socket_reader: SocketReader):
-        self.socket_reader = socket_reader
+    def __init__(self, buf: IO[bytes]):
+        self.buf = buf
+
+    @classmethod
+    def parse_content(cls, socket_reader: SocketReader) -> Self:
+        buf = io.BytesIO()
+        data = socket_reader.read_until(b"\r\n\r\n")
+        buf.write(data[: -len(b"\r\n\r\n")])
+        buf.seek(0, os.SEEK_SET)
+        return cls(buf=buf)
 
     def read(self, size: int) -> bytes:
         if not isinstance(size, int):
@@ -231,4 +239,4 @@ class EOFReader(BodyReader):
         if size == 0:
             return b""
 
-        return self.socket_reader.read(size)
+        return self.buf.read(size)

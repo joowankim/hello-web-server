@@ -78,7 +78,7 @@ class RequestBody:
                 )
             )
         else:
-            return cls(body_reader=reader.EOFReader(socket_reader))
+            return cls(body_reader=reader.EOFReader.parse_content(socket_reader))
 
     def read(self, size: int | None = None) -> bytes:
         if size is not None and not isinstance(size, int):
