@@ -55,14 +55,20 @@ class SocketReader:
             data = self.buf.read()
             read_length += len(data)
 
-            if (target_index := data.find(target)) != -1:
-                target_next_index = target_index + len(target)
-                self._read_cursor += target_next_index
-                return data[:target_next_index]
+            if limit is None:
+                if (target_index := data.find(target)) != -1:
+                    target_next_index = target_index + len(target)
+                    self._read_cursor += target_next_index
+                    return data[:target_next_index]
+            else:
+                if (target_index := data[:limit].find(target)) != -1:
+                    target_next_index = target_index + len(target)
+                    self._read_cursor += target_next_index
+                    return data[:target_next_index]
 
-            if limit is not None and read_length >= limit:
-                self._read_cursor += limit
-                return data[:limit]
+                if read_length >= limit:
+                    self._read_cursor += limit
+                    return data[:limit]
 
             self.buf.seek(0, io.SEEK_END)
             chunk = self.chunk()
