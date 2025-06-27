@@ -43,6 +43,10 @@ class RequestBody:
                 # T-E can be a list
                 # https://datatracker.ietf.org/doc/html/rfc9112#name-transfer-encoding
                 vals = tuple(v.strip().lower() for v in value.split(","))
+                if not set(vals).issubset(set(header.TransferEncoding)):
+                    raise UnsupportedTransferCoding(value)
+                if len(set(vals)) != len(vals):
+                    raise InvalidHeader("TRANSFER-ENCODING")
                 if len(vals) == 1:
                     if vals != (header.TransferEncoding.CHUNKED,):
                         raise InvalidHeader("TRANSFER-ENCODING")
@@ -51,8 +55,6 @@ class RequestBody:
                     if vals[-1] != header.TransferEncoding.CHUNKED:
                         raise InvalidHeader("TRANSFER-ENCODING")
                     chunked = True
-                if not set(vals).issubset(set(header.TransferEncoding)):
-                    raise UnsupportedTransferCoding(value)
 
         if not chunked and content_length is None:
             # RFC 9112 Section 6.1: If no Transfer-Encoding or Content-Length header is present,

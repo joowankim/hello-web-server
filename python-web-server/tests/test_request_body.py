@@ -116,6 +116,13 @@ def test_create(
             InvalidHeader,
             "Invalid HTTP Header: 'TRANSFER-ENCODING'",
         ),
+        (
+            (1, 1),
+            [("Transfer-Encoding", "identity,chunked,identity,chunked")],
+            b"Hello, World!",
+            InvalidHeader,
+            "Invalid HTTP Header: 'TRANSFER-ENCODING'",
+        ),
     ],
     indirect=["socket_reader"],
 )
