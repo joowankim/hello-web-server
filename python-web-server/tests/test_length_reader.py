@@ -32,13 +32,7 @@ def socket_reader(
             (b"hello world!", 12),
             b"GET /second HTTP/1.1\r\n\r\n",
         ),
-        pytest.param(
-            b"hello world!\r\n\r\n",
-            13,
-            (b"hello world!", 13),
-            b"",
-            marks=pytest.mark.xfail,
-        ),
+        (b"12\r\n\r\n", 6, (b"12\r\n\r\n", 6), b""),
     ],
     indirect=["socket_reader"],
 )

@@ -91,11 +91,16 @@ class LengthReader(BodyReader):
     @classmethod
     def parse_content(cls, socket_reader: SocketReader, length: int) -> Self:
         buf = io.BytesIO()
-        data = socket_reader.read_until(b"\r\n\r\n")[: -len(b"\r\n\r\n")]
-        print(data)
-        if len(data) != length:
-            raise InvalidHeader("Content-Length mismatch")
-        buf.write(data)
+        size = length
+        data = socket_reader.read(size)
+        while data:
+            buf.write(data)
+            if buf.tell() == length:
+                break
+            size -= buf.tell()
+            data = socket_reader.read(size)
+        if (d := socket_reader.read_until(b"\r\n\r\n")) != b"\r\n\r\n":
+            socket_reader.unread(len(d))
         buf.seek(0, os.SEEK_SET)
         return cls(buf=buf, length=length)
 
