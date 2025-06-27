@@ -84,9 +84,22 @@ class BodyReader(abc.ABC):
 
 
 class LengthReader(BodyReader):
-    def __init__(self, socket_reader: SocketReader, length: int):
-        self.socket_reader = socket_reader
+    def __init__(self, buf: IO[bytes], length: int):
+        self.buf = buf
         self.length = length
+
+    @classmethod
+    def parse_content(cls, socket_reader: SocketReader, length: int) -> Self:
+        buf = io.BytesIO()
+        data = socket_reader.read(length)
+        while data:
+            buf.write(data)
+            if buf.tell() >= length:
+                break
+            data = socket_reader.read()
+        socket_reader.read(len(b"\r\n\r\n"))  # Skip the trailing CRLF
+        buf.seek(0, os.SEEK_SET)
+        return cls(buf=buf, length=length)
 
     def read(self, size: int) -> bytes:
         if not isinstance(size, int):
@@ -99,16 +112,7 @@ class LengthReader(BodyReader):
             return b""
 
         self.length -= size
-        buf = io.BytesIO()
-        data = self.socket_reader.read()
-        while data:
-            buf.write(data)
-            if buf.tell() > size:
-                break
-            data = self.socket_reader.read()
-        ret, rest = buf.getvalue()[:size], buf.getvalue()[size:]
-        self.socket_reader.unread(len(rest))
-        return ret
+        return self.buf.read(size)
 
 
 class Chunk:
@@ -187,7 +191,6 @@ class ChunkedReader(BodyReader):
     def __init__(self, buf: IO[bytes], trailers: list[tuple[str, str]]):
         self.buf = buf
         self.trailers = trailers
-        self._read_cursor = 0
 
     @classmethod
     def parse_chunked(cls, socket_reader: SocketReader) -> Self:

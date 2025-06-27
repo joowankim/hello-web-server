@@ -72,7 +72,11 @@ class RequestBody:
         elif content_length is not None:
             if content_length < 0:
                 raise InvalidHeader("CONTENT-LENGTH")
-            return cls(body_reader=reader.LengthReader(socket_reader, content_length))
+            return cls(
+                body_reader=reader.LengthReader.parse_content(
+                    socket_reader, content_length
+                )
+            )
         else:
             return cls(body_reader=reader.EOFReader(socket_reader))
 

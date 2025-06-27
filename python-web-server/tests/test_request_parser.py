@@ -230,7 +230,7 @@ def test_parse_headers_with_invalid_stream(
         (
             (
                 dict(),
-                b"GET / HTTP/1.1\r\nHost: example.com\r\nContent-Length: 13\r\n\r\nHello, World!",
+                b"GET / HTTP/1.1\r\nHost: example.com\r\nContent-Length: 13\r\n\r\nHello, World!\r\n\r\n",
             ),
             [
                 (
@@ -305,6 +305,28 @@ def test_parse_headers_with_invalid_stream(
                 ),
             ],
         ),
+        (
+            (
+                dict(),
+                b"POST /two_chunks_mult_zero_end HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nhello\r\n6\r\n world\r\n000\r\n\r\nGET /second HTTP/1.1\r\n\r\n",
+            ),
+            [
+                (
+                    "POST",
+                    ("/two_chunks_mult_zero_end", "", ""),
+                    (1, 1),
+                    [("TRANSFER-ENCODING", "chunked")],
+                    b"hello world",
+                ),
+                (
+                    "GET",
+                    ("/second", "", ""),
+                    (1, 1),
+                    [],
+                    b"",
+                ),
+            ],
+        ),
     ],
     indirect=["request_parser"],
 )
@@ -314,7 +336,9 @@ def test_parse(
         tuple[str, tuple[str, str, str], str, list[tuple[int, int]], bytes]
     ],
 ):
-    for req, expected in zip(request_parser.parse(), expected_list):
+    reqs = list(request_parser.parse())
+
+    for req, expected in zip(reqs, expected_list):
         method, (path, query, fragment), version, headers, body = expected
 
         assert req.method == method
