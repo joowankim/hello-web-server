@@ -52,7 +52,7 @@ class RequestBody:
                 if not set(vals).issubset(set(header.TransferEncoding)):
                     raise UnsupportedTransferCoding(value)
 
-        if not chunked and content_length is None and protocol_version >= (1, 1):
+        if not chunked and content_length is None:
             # RFC 9112 Section 6.1: If no Transfer-Encoding or Content-Length header is present,
             # the message body is considered to be empty.
             return None
