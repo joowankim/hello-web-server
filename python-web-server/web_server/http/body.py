@@ -45,10 +45,10 @@ class RequestBody:
                 vals = tuple(v.strip().lower() for v in value.split(","))
                 if vals == (header.TransferEncoding.CHUNKED,):
                     chunked = True
-                if len(vals) > 1 and {header.TransferEncoding.CHUNKED}.issubset(
-                    set(vals)
-                ):
-                    raise InvalidHeader("TRANSFER-ENCODING")
+                if len(vals) > 1:
+                    if vals[-1] != header.TransferEncoding.CHUNKED:
+                        raise InvalidHeader("TRANSFER-ENCODING")
+                    chunked = True
                 if not set(vals).issubset(set(header.TransferEncoding)):
                     raise UnsupportedTransferCoding(value)
 

@@ -35,6 +35,12 @@ def socket_reader(request: pytest.FixtureRequest) -> SocketReader:
         ((1, 1), [], b"\r\n\r\n", b""),
         ((1, 1), [], b"\r\n\r\nGET / HTTP/1.1\r\nHost: example.com\r\n\r\n", b""),
         ((1, 0), [("CONNECTION", "Keep-Alive")], b"GET /second HTTP/1.1\r\n\r\n", b""),
+        (
+            (1, 1),
+            [("Transfer-Encoding", "gzip,chunked")],
+            b"5\r\nHello\r\n0\r\n\r\n",
+            b"Hello",
+        ),
     ],
     indirect=["socket_reader"],
 )
@@ -102,6 +108,13 @@ def test_create(
             b"Hello",
             InvalidHeader,
             "Invalid HTTP Header: 'CONTENT-LENGTH'",
+        ),
+        (
+            (1, 1),
+            [("Transfer-Encoding", "chunked,gzip")],
+            b"Hello, World!",
+            InvalidHeader,
+            "Invalid HTTP Header: 'TRANSFER-ENCODING'",
         ),
     ],
     indirect=["socket_reader"],

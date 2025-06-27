@@ -30,7 +30,7 @@ def socket_reader(request: pytest.FixtureRequest) -> SocketReader:
                 b"Vary: *\r\nContent-Type: text/plain\r\n\r\n"
             ),
             b"hello world",
-            [("Vary", "*"), ("Content-Type", "text/plain")],
+            [("VARY", "*"), ("CONTENT-TYPE", "text/plain")],
             b"",
         ),
         (
