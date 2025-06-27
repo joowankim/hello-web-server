@@ -121,7 +121,7 @@ class RequestParser:
                 break
             if len(header_line) > self.cfg.limit_request_field_size:
                 raise LimitRequestHeaders("limit request header field size")
-            header_parts = header_line.decode().strip().split(":", 1)
+            header_parts = bytes_to_str(header_line).strip().split(":", 1)
             if len(header_parts) != 2:
                 raise InvalidHeader(header_line)
             headers.append(
