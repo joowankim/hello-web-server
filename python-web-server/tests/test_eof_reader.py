@@ -24,20 +24,24 @@ def socket_reader(
 
 
 @pytest.mark.parametrize(
-    "socket_reader, expected",
+    "socket_reader, expected, expected_rest",
     [
-        (b"hello world!\r\n\r\n", b"hello world!"),
+        (b"hello world!\r\n\r\n", b"hello world!", b""),
         (
             b"hello world!\r\n\r\nGET /second HTTP/1.1\r\n\r\n",
             b"hello world!",
+            b"GET /second HTTP/1.1\r\n\r\n",
         ),
     ],
     indirect=["socket_reader"],
 )
-def test_parse_content(socket_reader: SocketReader, expected: bytes):
+def test_parse_content(
+    socket_reader: SocketReader, expected: bytes, expected_rest: bytes
+):
     eof_reader = EOFReader.parse_content(socket_reader)
 
     assert eof_reader.buf.read() == expected
+    assert socket_reader.read() == expected_rest[: socket_reader.max_chunk]
 
 
 @pytest.fixture

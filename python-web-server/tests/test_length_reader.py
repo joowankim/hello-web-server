@@ -23,23 +23,35 @@ def socket_reader(
 
 
 @pytest.mark.parametrize(
-    "socket_reader, length, expected",
+    "socket_reader, length, expected, expected_rest",
     [
-        (b"hello world!\r\n\r\n", 12, (b"hello world!", 12)),
+        (b"hello world!\r\n\r\n", 12, (b"hello world!", 12), b""),
         (
             b"hello world!\r\n\r\nGET /second HTTP/1.1\r\n\r\n",
             12,
             (b"hello world!", 12),
+            b"GET /second HTTP/1.1\r\n\r\n",
+        ),
+        pytest.param(
+            b"hello world!\r\n\r\n",
+            13,
+            (b"hello world!", 13),
+            b"",
+            marks=pytest.mark.xfail,
         ),
     ],
     indirect=["socket_reader"],
 )
 def test_parse_content(
-    socket_reader: SocketReader, length: int, expected: tuple[bytes, int]
+    socket_reader: SocketReader,
+    length: int,
+    expected: tuple[bytes, int],
+    expected_rest: bytes,
 ):
     reader = LengthReader.parse_content(socket_reader=socket_reader, length=length)
 
     assert (reader.buf.read(), reader.length) == expected
+    assert socket_reader.read() == expected_rest[: socket_reader.max_chunk]
 
 
 @pytest.fixture

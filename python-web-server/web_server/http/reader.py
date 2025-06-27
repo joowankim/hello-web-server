@@ -6,7 +6,7 @@ from collections.abc import Generator
 
 from typing import Self, IO, ClassVar
 
-from web_server.http.errors import InvalidChunkSize
+from web_server.http.errors import InvalidChunkSize, InvalidHeader
 
 
 class SocketReader:
@@ -91,13 +91,11 @@ class LengthReader(BodyReader):
     @classmethod
     def parse_content(cls, socket_reader: SocketReader, length: int) -> Self:
         buf = io.BytesIO()
-        data = socket_reader.read(length)
-        while data:
-            buf.write(data)
-            if buf.tell() >= length:
-                break
-            data = socket_reader.read()
-        socket_reader.read(len(b"\r\n\r\n"))  # Skip the trailing CRLF
+        data = socket_reader.read_until(b"\r\n\r\n")[: -len(b"\r\n\r\n")]
+        print(data)
+        if len(data) != length:
+            raise InvalidHeader("Content-Length mismatch")
+        buf.write(data)
         buf.seek(0, os.SEEK_SET)
         return cls(buf=buf, length=length)
 
