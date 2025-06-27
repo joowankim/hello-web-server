@@ -43,9 +43,11 @@ class RequestBody:
                 # T-E can be a list
                 # https://datatracker.ietf.org/doc/html/rfc9112#name-transfer-encoding
                 vals = tuple(v.strip().lower() for v in value.split(","))
-                if vals == (header.TransferEncoding.CHUNKED,):
+                if len(vals) == 1:
+                    if vals != (header.TransferEncoding.CHUNKED,):
+                        raise InvalidHeader("TRANSFER-ENCODING")
                     chunked = True
-                if len(vals) > 1:
+                elif len(vals) > 1:
                     if vals[-1] != header.TransferEncoding.CHUNKED:
                         raise InvalidHeader("TRANSFER-ENCODING")
                     chunked = True

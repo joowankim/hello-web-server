@@ -255,9 +255,8 @@ class request:
         cases = self.expect[:]
         fake_sock = fake.FakeSocket(sender())
         fake_sock = cast(socket.socket, fake_sock)
-        p = RequestParser(
-            cfg=cfg, socket_reader=SocketReader(sock=fake_sock, max_chunk=8192)
-        )
+        socket_reader = SocketReader(sock=fake_sock, max_chunk=8192)
+        p = RequestParser(cfg=cfg, socket_reader=socket_reader)
         parsed_request_idx = -1
         for parsed_request_idx, req in enumerate(p.parse()):
             self.same(req, sizer, matcher, cases.pop(0))
@@ -302,7 +301,10 @@ class badrequest:
             read += chunk
 
     def check(self, cfg):
-        p = RequestParser(cfg=cfg, socket_reader=SocketReader(self.send()))
+        fake_sock = fake.FakeSocket(self.send())
+        fake_sock = cast(socket.socket, fake_sock)
+        socket_reader = SocketReader(sock=fake_sock, max_chunk=8192)
+        p = RequestParser(cfg=cfg, socket_reader=socket_reader)
         # must fully consume iterator, otherwise EOF errors could go unnoticed
         for _ in p.parse():
             pass
