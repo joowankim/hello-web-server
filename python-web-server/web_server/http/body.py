@@ -27,7 +27,7 @@ class RequestBody:
         protocol_version: tuple[int, int],
         headers: list[tuple[str, str]],
         socket_reader: reader.SocketReader,
-    ) -> Self | None:
+    ) -> Self:
         chunked = False
         content_length = None
 
@@ -55,7 +55,7 @@ class RequestBody:
         if not chunked and content_length is None:
             # RFC 9112 Section 6.1: If no Transfer-Encoding or Content-Length header is present,
             # the message body is considered to be empty.
-            return None
+            return cls(body_reader=reader.EOFReader(io.BytesIO(b"")))
 
         if chunked:
             # two potentially dangerous cases:

@@ -1,4 +1,3 @@
-import io
 import re
 from collections.abc import Generator
 from typing import ClassVar
@@ -56,7 +55,7 @@ class RequestParser:
                 query=query,
                 fragment=fragment,
                 headers=headers,
-                body=req_body or body.RequestBody(reader.EOFReader(io.BytesIO(b""))),
+                body=req_body,
                 version=version,
                 trailers=trailers,
             )
