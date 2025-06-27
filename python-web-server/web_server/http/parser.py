@@ -12,6 +12,7 @@ from web_server.http.errors import (
     InvalidHeader,
     LimitRequestHeaders,
     InvalidHeaderName,
+    NoMoreData,
 )
 from web_server.util import split_request_uri, bytes_to_str
 
@@ -118,6 +119,8 @@ class RequestParser:
             if len(headers) > self.cfg.limit_request_fields:
                 raise LimitRequestHeaders("limit request headers fields")
             header_line = self.reader.read_until(b"\r\n")
+            if not header_line.endswith(b"\r\n"):
+                raise NoMoreData(header_line)
             if header_line == b"\r\n":
                 break
             if len(header_line) > self.cfg.limit_request_field_size:

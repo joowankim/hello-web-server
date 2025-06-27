@@ -13,6 +13,7 @@ from web_server.http.errors import (
     LimitRequestLine,
     LimitRequestHeaders,
     InvalidHeaderName,
+    NoMoreData,
 )
 from web_server.http.parser import RequestParser, should_close
 from web_server.http.reader import SocketReader
@@ -247,6 +248,11 @@ def test_parse_headers(request_parser: RequestParser, expected: list[tuple[str, 
             ),
             InvalidHeaderName,
             "Invalid HTTP header name: 'Header1 '",
+        ),
+        (
+            (dict(), b"baz"),
+            NoMoreData,
+            "No more data after: b'baz'",
         ),
     ],
     indirect=["request_parser"],
