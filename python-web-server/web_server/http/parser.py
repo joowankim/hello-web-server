@@ -47,18 +47,18 @@ class RequestParser:
             method, (path, query, fragment), version = self.parse_request_line()
             headers = self.parse_headers()
             req_body = body.RequestBody.create(version, headers, self.reader)
-            if req_body is not None and isinstance(
-                req_body.reader, reader.ChunkedReader
-            ):
-                headers += req_body.reader.trailers
+            trailers = (
+                req_body.reader.trailers if hasattr(req_body.reader, "trailers") else []
+            )
             yield message.Request(
                 method=method,
                 path=path,
                 query=query,
                 fragment=fragment,
                 headers=headers,
-                body=req_body or body.RequestBody(io.BytesIO(b"")),
+                body=req_body or body.RequestBody(reader.EOFReader(io.BytesIO(b""))),
                 version=version,
+                trailers=trailers,
             )
             if should_close(version, headers):
                 break

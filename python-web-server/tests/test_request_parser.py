@@ -239,6 +239,7 @@ def test_parse_headers_with_invalid_stream(
                     (1, 1),
                     [("HOST", "example.com"), ("CONTENT-LENGTH", "13")],
                     b"Hello, World!",
+                    [],
                 ),
             ],
         ),
@@ -254,13 +255,21 @@ def test_parse_headers_with_invalid_stream(
                     (1, 1),
                     [("HOST", "example.com"), ("TRANSFER-ENCODING", "chunked")],
                     b"Hello, World!",
+                    [],
                 ),
             ],
         ),
         (
             (dict(), b"PUT /update HTTP/1.0\r\nHost: example.com\r\n\r\n"),
             [
-                ("PUT", ("/update", "", ""), (1, 0), [("HOST", "example.com")], b""),
+                (
+                    "PUT",
+                    ("/update", "", ""),
+                    (1, 0),
+                    [("HOST", "example.com")],
+                    b"",
+                    [],
+                ),
             ],
         ),
         (
@@ -275,6 +284,7 @@ def test_parse_headers_with_invalid_stream(
                     (1, 1),
                     [("TRANSFER-ENCODING", "chunked")],
                     b"hello",
+                    [],
                 ),
                 (
                     "POST",
@@ -282,6 +292,7 @@ def test_parse_headers_with_invalid_stream(
                     (1, 1),
                     [("CONTENT-LENGTH", "5")],
                     b"Hello",
+                    [],
                 ),
             ],
         ),
@@ -302,6 +313,7 @@ def test_parse_headers_with_invalid_stream(
                     (1, 1),
                     [("TRANSFER-ENCODING", "chunked"), ("CONNECTION", "Close")],
                     b"hello",
+                    [],
                 ),
             ],
         ),
@@ -317,6 +329,7 @@ def test_parse_headers_with_invalid_stream(
                     (1, 1),
                     [("TRANSFER-ENCODING", "chunked")],
                     b"hello world",
+                    [],
                 ),
                 (
                     "GET",
@@ -324,6 +337,7 @@ def test_parse_headers_with_invalid_stream(
                     (1, 1),
                     [],
                     b"",
+                    [],
                 ),
             ],
         ),
@@ -333,14 +347,21 @@ def test_parse_headers_with_invalid_stream(
 def test_parse(
     request_parser: RequestParser,
     expected_list: list[
-        tuple[str, tuple[str, str, str], str, list[tuple[int, int]], bytes]
+        tuple[
+            str,
+            tuple[str, str, str],
+            str,
+            list[tuple[int, int]],
+            bytes,
+            list[tuple[str, str]],
+        ]
     ],
 ):
     reqs = list(request_parser.parse())
     assert len(reqs) == len(expected_list)
 
     for req, expected in zip(reqs, expected_list):
-        method, (path, query, fragment), version, headers, body = expected
+        method, (path, query, fragment), version, headers, body, trailers = expected
 
         assert req.method == method
         assert req.path == path
@@ -349,6 +370,7 @@ def test_parse(
         assert req.version == version
         assert req.headers == headers
         assert req.body.read() == body
+        assert req.trailers == trailers
 
 
 @pytest.mark.parametrize(
@@ -363,6 +385,7 @@ def test_parse(
                     (1, 1),
                     [("HOST", "example.com")],
                     b"",
+                    [],
                 ),
             ],
         ),
@@ -375,6 +398,7 @@ def test_parse(
                     (1, 1),
                     [("HOST", "example.com")],
                     b"",
+                    [],
                 ),
             ],
         ),
@@ -387,6 +411,7 @@ def test_parse(
                     (1, 1),
                     [],
                     b"",
+                    [],
                 ),
                 (
                     "GET",
@@ -394,6 +419,7 @@ def test_parse(
                     (1, 1),
                     [],
                     b"",
+                    [],
                 ),
             ],
         ),
@@ -403,11 +429,18 @@ def test_parse(
 def test_parse_with_empty_body(
     request_parser: RequestParser,
     expected_list: list[
-        tuple[str, tuple[str, str, str], str, list[tuple[int, int]], bytes]
+        tuple[
+            str,
+            tuple[str, str, str],
+            str,
+            list[tuple[int, int]],
+            bytes,
+            list[tuple[str, str]],
+        ]
     ],
 ):
     for req, expected in zip(request_parser.parse(), expected_list):
-        method, (path, query, fragment), version, headers, body = expected
+        method, (path, query, fragment), version, headers, body, trailers = expected
 
         assert req.method == method
         assert req.path == path

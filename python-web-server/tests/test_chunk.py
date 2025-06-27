@@ -135,14 +135,14 @@ def test_is_last():
                 data=io.BytesIO(b"Vary: *\r\nContent-Type: text/plain\r\n"),
                 size=0,
             ),
-            [("Vary", "*"), ("Content-Type", "text/plain")],
+            [("VARY", "*"), ("CONTENT-TYPE", "text/plain")],
         ),
         (
             Chunk(
                 data=io.BytesIO(b"Trailer-Name: value\r\nAnother-Header: value2\r\n"),
                 size=0,
             ),
-            [("Trailer-Name", "value"), ("Another-Header", "value2")],
+            [("TRAILER-NAME", "value"), ("ANOTHER-HEADER", "value2")],
         ),
         (
             Chunk(data=io.BytesIO(b""), size=0),

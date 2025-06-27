@@ -13,6 +13,7 @@ class Request:
         version: tuple[int, int],
         headers: Sequence[tuple[str, str]],
         body: RequestBody,
+        trailers: Sequence[tuple[str, str]],
     ):
         self.method = method
         self.path = path
@@ -21,3 +22,4 @@ class Request:
         self.version = version
         self.headers = headers
         self.body = body
+        self.trailers = trailers

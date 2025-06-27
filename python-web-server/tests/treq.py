@@ -272,6 +272,7 @@ class request:
         assert req.version == exp["version"]
         assert req.headers == exp["headers"]
         matcher(req, exp["body"], sizer)
+        assert req.trailers == exp.get("trailers", [])
 
 
 class badrequest:

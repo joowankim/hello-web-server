@@ -134,7 +134,7 @@ class Chunk:
     def trailers(self) -> list[tuple[str, str]]:
         if not self.is_last:
             return []
-        return [
+        headers = [
             tuple(
                 [
                     value.replace(b"\r\n", b"").decode("utf-8").strip()
@@ -143,6 +143,7 @@ class Chunk:
             )
             for line in self.data.readlines()
         ]
+        return [(key.upper(), value) for key, value in headers]
 
     @classmethod
     def from_socket_reader(
