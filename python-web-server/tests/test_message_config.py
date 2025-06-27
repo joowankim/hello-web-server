@@ -1,3 +1,4 @@
+import sys
 from typing import Any
 
 import pytest
@@ -43,7 +44,7 @@ def test_default(expected: MessageConfig):
         (
             dict(limit_request_line=0),
             dict(
-                limit_request_line=8190,
+                limit_request_line=sys.maxsize,
                 limit_request_fields=100,
                 limit_request_field_size=8190,
                 permit_unconventional_http_method=False,
@@ -95,7 +96,7 @@ def test_default(expected: MessageConfig):
             dict(
                 limit_request_line=4094,
                 limit_request_fields=100,
-                limit_request_field_size=0,
+                limit_request_field_size=sys.maxsize,
                 permit_unconventional_http_method=False,
                 permit_unconventional_http_version=False,
             ),

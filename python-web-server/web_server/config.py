@@ -1,4 +1,5 @@
 import dataclasses
+import sys
 from typing import Self
 
 MAX_REQUEST_LINE = 8190
@@ -33,14 +34,20 @@ class MessageConfig:
         permit_unconventional_http_method: bool = False,
         permit_unconventional_http_version: bool = False,
     ) -> Self:
-        return cls(
-            limit_request_line=MAX_REQUEST_LINE
-            if limit_request_line == 0
-            else min(limit_request_line, MAX_REQUEST_LINE),
-            limit_request_fields=min(limit_request_fields, MAX_HEADERS),
-            limit_request_field_size=DEFAULT_MAX_HEADERFIELD_SIZE
+        limit_request_line = (
+            MAX_REQUEST_LINE
+            if limit_request_line < 0
+            else min(limit_request_line, MAX_REQUEST_LINE)
+        ) or sys.maxsize
+        limit_request_field_size = (
+            DEFAULT_MAX_HEADERFIELD_SIZE
             if limit_request_field_size < 0
-            else limit_request_field_size,
+            else limit_request_field_size
+        ) or sys.maxsize
+        return cls(
+            limit_request_line=limit_request_line,
+            limit_request_fields=min(limit_request_fields, MAX_HEADERS),
+            limit_request_field_size=limit_request_field_size,
             permit_unconventional_http_method=permit_unconventional_http_method,
             permit_unconventional_http_version=permit_unconventional_http_version,
         )

@@ -1,9 +1,10 @@
 from tests.treq import uri
 from web_server.config import MessageConfig
 
-cfg = MessageConfig.default()
-# cfg.set('limit_request_line', 0)
-# cfg.set('limit_request_field_size', 0)
+cfg = MessageConfig.custom(
+    limit_request_line=0,
+    limit_request_field_size=0,
+)
 request = {
     "method": "PUT",
     "uri": uri(
