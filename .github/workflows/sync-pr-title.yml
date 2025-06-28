@@ -1,0 +1,59 @@
+name: Sync PR Title with Issue
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  issues: read
+  pull-requests: write
+
+jobs:
+  sync_pr_title:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract Issue Number from Branch Name
+        id: extract
+        run: |
+          ISSUE_NUMBER=$(echo ${{ github.head_ref }} | grep -oE '[0-9]+$')
+          echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
+          echo "Issue number extracted: $ISSUE_NUMBER"
+
+      - name: Update PR Title with Issue Title
+        if: steps.extract.outputs.issue_number != ''
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue_number = '${{ steps.extract.outputs.issue_number }}';
+            if (!issue_number) {
+              console.log('No issue number found in branch name');
+              return;
+            }
+
+            try {
+              // Get issue details
+              const issue = await github.rest.issues.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue_number
+              });
+
+              const issue_title = issue.data.title;
+              const new_pr_title = `#${issue_number}: ${issue_title}`;
+
+              // Update PR title
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.payload.pull_request.number,
+                title: new_pr_title
+              });
+
+              console.log(`PR title updated to: ${new_pr_title}`);
+            } catch (error) {
+              console.log(`Error: ${error.message}`);
+              if (error.status === 404) {
+                console.log(`Issue #${issue_number} not found`);
+              }
+            }
