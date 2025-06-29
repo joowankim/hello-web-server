@@ -47,8 +47,32 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 pull_number: context.payload.pull_request.number,
-                title: new_pr_title
+                title: new_pr_title,
               });
+
+              // Update PR labels (using issues API because PR is treated as an issue)
+              if (issue.data.labels && issue.data.labels.length > 0) {
+                const labels = issue.data.labels.map(label => label.name);
+                await github.rest.issues.setLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.pull_request.number,
+                  labels: labels
+                });
+                console.log(`PR labels updated to: ${labels.join(', ')}`);
+              }
+
+              // Update PR assignees (using issues API)
+              if (issue.data.assignees && issue.data.assignees.length > 0) {
+                const assignees = issue.data.assignees.map(assignee => assignee.login);
+                await github.rest.issues.addAssignees({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.pull_request.number,
+                  assignees: assignees
+                });
+                console.log(`PR assignees updated to: ${assignees.join(', ')}`);
+              }
 
               console.log(`PR title updated to: ${new_pr_title}`);
             } catch (error) {
