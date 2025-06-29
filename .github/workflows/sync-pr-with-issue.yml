@@ -1,4 +1,4 @@
-name: Sync PR Title with Issue
+name: Sync PR metadata with Issue
 
 on:
   pull_request:
