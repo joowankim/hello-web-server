@@ -9,7 +9,7 @@ permissions:
   pull-requests: write
 
 jobs:
-  sync_pr_title:
+  sync_pr_metadata:
     runs-on: ubuntu-latest
     steps:
       - name: Extract Issue Number from Branch Name
@@ -19,7 +19,7 @@ jobs:
           echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
           echo "Issue number extracted: $ISSUE_NUMBER"
 
-      - name: Update PR Title with Issue Title
+      - name: Update PR metadata with Issue metadata
         if: steps.extract.outputs.issue_number != ''
         uses: actions/github-script@v6
         with:
