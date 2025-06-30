@@ -1,4 +1,4 @@
-from tests.treq import uri
+from tests.http.treq import uri
 
 request = {
     "method": "GET",

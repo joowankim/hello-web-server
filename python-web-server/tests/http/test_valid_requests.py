@@ -3,10 +3,10 @@ import os
 
 import pytest
 
-from tests import treq
+from tests.http import treq
 
 dirname = os.path.dirname(__file__)
-reqdir = os.path.join(dirname, "requests", "invalid")
+reqdir = os.path.join(dirname, "requests", "valid")
 httpfiles = glob.glob(os.path.join(reqdir, "*.http"))
 
 
@@ -16,7 +16,7 @@ def test_http_parser(fname):
 
     expect = env["request"]
     cfg = env["cfg"]
-    req = treq.badrequest(fname)
+    req = treq.request(fname, expect)
 
-    with pytest.raises(expect):
-        req.check(cfg)
+    for case in req.gen_cases(cfg):
+        case[0](*case[1:])
