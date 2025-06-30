@@ -2,6 +2,8 @@ import dataclasses
 import sys
 from typing import Self
 
+from web_server.http.errors import ConfigurationProblem
+
 MAX_REQUEST_LINE = 8190
 MAX_HEADERS = 32768
 DEFAULT_MAX_HEADERFIELD_SIZE = 8190
@@ -79,3 +81,14 @@ class Config:
         env: EnvConfig = EnvConfig.default(),
     ) -> Self:
         return cls(message=message, env=env)
+
+    def parse_path(self, path: str) -> tuple[str, str]:
+        if not path.startswith(self.env.script_name):
+            raise ConfigurationProblem(
+                f"Request path {path} does not start with SCRIPT_NAME {self.env.script_name}"
+            )
+
+        script_name = self.env.script_name.rstrip("/")
+        path_info = path[len(script_name) :]
+
+        return self.env.script_name, path_info
