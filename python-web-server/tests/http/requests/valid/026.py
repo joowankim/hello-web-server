@@ -1,4 +1,4 @@
-from tests.treq import uri
+from tests.http.treq import uri
 from web_server.config import MessageConfig
 
 cfg = MessageConfig.custom(
