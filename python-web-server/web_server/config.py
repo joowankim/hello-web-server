@@ -9,21 +9,15 @@ DEFAULT_MAX_HEADERFIELD_SIZE = 8190
 
 @dataclasses.dataclass
 class MessageConfig:
-    limit_request_line: int
-    limit_request_fields: int
-    limit_request_field_size: int
-    permit_unconventional_http_method: bool
-    permit_unconventional_http_version: bool
+    limit_request_line: int = 4094
+    limit_request_fields: int = 100
+    limit_request_field_size: int = 8190
+    permit_unconventional_http_method: bool = False
+    permit_unconventional_http_version: bool = False
 
     @classmethod
     def default(cls) -> Self:
-        return cls(
-            limit_request_line=4094,
-            limit_request_fields=100,
-            limit_request_field_size=8190,
-            permit_unconventional_http_method=False,
-            permit_unconventional_http_version=False,
-        )
+        return cls()
 
     @classmethod
     def custom(
@@ -51,3 +45,22 @@ class MessageConfig:
             permit_unconventional_http_method=permit_unconventional_http_method,
             permit_unconventional_http_version=permit_unconventional_http_version,
         )
+
+
+@dataclasses.dataclass
+class EnvConfig:
+    script_name: str = ""
+
+    @classmethod
+    def default(cls) -> Self:
+        return cls()
+
+    @classmethod
+    def custom(cls, script_name: str = "") -> Self:
+        return cls(script_name=script_name)
+
+
+@dataclasses.dataclass
+class Config:
+    message: MessageConfig
+    env: EnvConfig
