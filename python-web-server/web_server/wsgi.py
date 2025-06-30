@@ -19,7 +19,7 @@ class WSGIErrorStream(io.RawIOBase):
         for stream in self.streams:
             try:
                 stream.write(data)
-            except UnicodeError:
+            except UnicodeEncodeError:
                 stream.write(data.encode("UTF-8"))
 
     def flush(self) -> None:
@@ -31,5 +31,5 @@ class WSGIErrorStream(io.RawIOBase):
             for line in seq:
                 try:
                     stream.write(line)
-                except UnicodeError:
+                except UnicodeEncodeError:
                     stream.write(line.encode("UTF-8"))
