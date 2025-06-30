@@ -64,3 +64,18 @@ class EnvConfig:
 class Config:
     message: MessageConfig
     env: EnvConfig
+
+    @classmethod
+    def default(cls) -> Self:
+        return cls(
+            message=MessageConfig.default(),
+            env=EnvConfig.default(),
+        )
+
+    @classmethod
+    def custom(
+        cls,
+        message: MessageConfig = MessageConfig.default(),
+        env: EnvConfig = EnvConfig.default(),
+    ) -> Self:
+        return cls(message=message, env=env)
