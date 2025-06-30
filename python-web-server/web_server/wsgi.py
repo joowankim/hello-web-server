@@ -1,4 +1,5 @@
 import io
+from collections.abc import Sequence
 from typing import IO
 
 
@@ -20,4 +21,10 @@ class WSGIErrorStream(io.RawIOBase):
         for stream in self.streams:
             stream.flush()
 
-    def writelines(self, seq: list[str]) -> None: ...
+    def writelines(self, seq: Sequence[str]) -> None:
+        for stream in self.streams:
+            for line in seq:
+                try:
+                    stream.write(line)
+                except UnicodeError:
+                    stream.write(line.encode("UTF-8"))

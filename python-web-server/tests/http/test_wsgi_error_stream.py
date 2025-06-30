@@ -1,5 +1,5 @@
 import tempfile
-from collections.abc import Generator
+from collections.abc import Generator, Sequence
 from typing import IO
 
 import pytest
@@ -31,6 +31,29 @@ def test_write(
     wsgi_error_stream: WSGIErrorStream, data: str, tmp_file: IO[bytes], expected: str
 ):
     wsgi_error_stream.write(data)
+    wsgi_error_stream.flush()
+
+    tmp_file.seek(0)
+
+    assert tmp_file.read() == expected
+
+
+@pytest.mark.parametrize(
+    "data, expected",
+    [
+        (["line1", "line2\n", "line3"], "line1line2\nline3"),
+        (["line1", "line2\n"], "line1line2\n"),
+        ([], ""),
+    ],
+    ids=["multiple_lines", "two_lines", "empty"],
+)
+def test_writelines(
+    wsgi_error_stream: WSGIErrorStream,
+    data: Sequence[str],
+    tmp_file: IO[str],
+    expected: str,
+):
+    wsgi_error_stream.writelines(data)
     wsgi_error_stream.flush()
 
     tmp_file.seek(0)
