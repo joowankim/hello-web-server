@@ -1,6 +1,7 @@
 import io
+import sys
 from collections.abc import Sequence
-from typing import IO
+from typing import IO, Self
 
 
 class WSGIErrorStream(io.RawIOBase):
@@ -9,6 +10,10 @@ class WSGIErrorStream(io.RawIOBase):
         # we don't need to call super() in the __init__ method.
         # pylint: disable=super-init-not-called
         self.streams = sub_streams
+
+    @classmethod
+    def with_stderr(cls) -> Self:
+        return cls([sys.stderr])
 
     def write(self, data: str) -> None:
         for stream in self.streams:
