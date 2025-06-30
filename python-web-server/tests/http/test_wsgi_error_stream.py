@@ -14,7 +14,7 @@ def tmp_file() -> Generator[IO[str], None, None]:
 
 
 @pytest.fixture
-def wsgi_error_stream(tmp_file: IO[bytes]) -> WSGIErrorStream:
+def wsgi_error_stream(tmp_file: IO[str]) -> WSGIErrorStream:
     return WSGIErrorStream([tmp_file])
 
 
@@ -28,7 +28,7 @@ def wsgi_error_stream(tmp_file: IO[bytes]) -> WSGIErrorStream:
     ids=["no_newline", "newline_lf", "empty"],
 )
 def test_write(
-    wsgi_error_stream: WSGIErrorStream, data: str, tmp_file: IO[bytes], expected: str
+    wsgi_error_stream: WSGIErrorStream, data: str, tmp_file: IO[str], expected: str
 ):
     wsgi_error_stream.write(data)
     wsgi_error_stream.flush()
