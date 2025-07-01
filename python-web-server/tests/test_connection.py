@@ -3,6 +3,7 @@ from unittest import mock
 
 import pytest
 
+from tests.conftest import MockCallList
 from web_server.connection import Connection
 
 
@@ -30,3 +31,47 @@ def test_write(
     connection.write(response_body)
 
     mock_sock.sendall.assert_called_once_with(expected)
+
+
+@pytest.mark.parametrize(
+    "protocol_version, status, response_headers, response_body, expected",
+    [
+        (
+            (1, 1),
+            "200 OK",
+            [("Content-Type", "text/plain")],
+            b"Hello, World!",
+            [
+                mock.call(b"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n"),
+                mock.call(b"Hello, World!"),
+            ],
+        ),
+        (
+            (1, 0),
+            "404 Not Found",
+            [("Content-Type", "text/html")],
+            b"<h1>Not Found</h1>",
+            [
+                mock.call(b"HTTP/1.0 404 Not Found\r\nContent-Type: text/html\r\n\r\n"),
+                mock.call(b"<h1>Not Found</h1>"),
+            ],
+        ),
+    ],
+)
+def test_start_response(
+    connection: Connection,
+    protocol_version: tuple[int, int],
+    status: str,
+    response_headers: list[tuple[str, str]],
+    response_body: bytes,
+    mock_sock: mock.Mock,
+    expected: MockCallList,
+):
+    write = connection.start_response(
+        protocol_version=protocol_version,
+        status=status,
+        response_headers=response_headers,
+    )
+    mock_sock.sendall.assert_not_called()
+    write(response_body)
+    mock_sock.sendall.assert_has_calls(expected)
