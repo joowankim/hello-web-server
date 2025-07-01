@@ -15,6 +15,7 @@ class Request:
         body: RequestBody,
         trailers: Sequence[tuple[str, str]],
     ):
+        self.url_scheme = "http"
         self.method = method
         self.path = path
         self.query = query
