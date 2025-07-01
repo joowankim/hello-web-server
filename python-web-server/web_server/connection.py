@@ -16,14 +16,14 @@ class Connection:
         self,
         protocol_version: tuple[int, int],
         status: str,
-        response_headers: list[tuple[str, str]],
+        headers: list[tuple[str, str]],
         exc_info: ExcInfo | None = None,
     ) -> Callable[[bytes], None]:
         status_line = f"HTTP/{protocol_version[0]}.{protocol_version[1]} {status}\r\n"
-        headers = "".join(f"{name}: {value}\r\n" for name, value in response_headers)
+        header_fields = "".join(f"{name}: {value}\r\n" for name, value in headers)
 
         def _write(data: bytes) -> None:
-            pre_body = (status_line + headers).encode("latin-1") + b"\r\n"
+            pre_body = (status_line + header_fields).encode("latin-1") + b"\r\n"
             self.sock.sendall(pre_body)
             self.write(data)
 

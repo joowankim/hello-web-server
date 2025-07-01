@@ -34,7 +34,7 @@ def test_write(
 
 
 @pytest.mark.parametrize(
-    "protocol_version, status, response_headers, response_body, expected",
+    "protocol_version, status, headers, response_body, expected",
     [
         (
             (1, 1),
@@ -62,7 +62,7 @@ def test_start_response(
     connection: Connection,
     protocol_version: tuple[int, int],
     status: str,
-    response_headers: list[tuple[str, str]],
+    headers: list[tuple[str, str]],
     response_body: bytes,
     mock_sock: mock.Mock,
     expected: MockCallList,
@@ -70,7 +70,7 @@ def test_start_response(
     write = connection.start_response(
         protocol_version=protocol_version,
         status=status,
-        response_headers=response_headers,
+        headers=headers,
     )
     mock_sock.sendall.assert_not_called()
     write(response_body)

@@ -1,10 +1,12 @@
 import socket
 from typing import cast
+from unittest import mock
 
 import pytest
 
 from tests import support, fake
 from web_server.config import Config
+from web_server.connection import Connection
 from web_server.http import Request, RequestBody
 from web_server.http.reader import SocketReader
 from web_server.wsgi import WSGIEnviron
@@ -37,11 +39,21 @@ def req(request_body: RequestBody) -> Request:
 
 
 @pytest.fixture
+def connection() -> Connection:
+    return Connection(sock=mock.Mock(spec=socket.socket))
+
+
+@pytest.fixture
 def wsgi_environ(req: Request) -> WSGIEnviron:
     cfg = Config.default()
     server = ("localhost", "8000")
     return WSGIEnviron.build(cfg=cfg, server=server, request=req)
 
 
-def test_hello_wsgiref(wsgi_environ: WSGIEnviron):
-    support.app(wsgi_environ.dict(), lambda *a, **k: None)
+def test_hello_wsgiref(wsgi_environ: WSGIEnviron, connection: Connection):
+    def start_response(status, headers, exc_info=None):
+        return connection.start_response(
+            protocol_version=(1, 1), status=status, headers=headers, exc_info=exc_info
+        )
+
+    support.app(wsgi_environ.dict(), start_response)
