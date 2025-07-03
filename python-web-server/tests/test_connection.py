@@ -170,3 +170,90 @@ def test_start_response_duplication_called(
         mock_sock.sendall.assert_has_calls(b"")
     write(response_body)
     mock_sock.sendall.assert_has_calls(expected)
+
+
+@pytest.mark.parametrize(
+    "response_params, error_type, error_message",
+    [
+        (
+            [
+                ((1, 1), "200 OK", [("Content-Type", "text/plain")], None),
+                (
+                    (1, 1),
+                    "400 Bad Request",
+                    [("Content-Type", "text/plain")],
+                    (ValueError, ValueError("Test error"), None),
+                ),
+            ],
+            ValueError,
+            "Test error",
+        ),
+        (
+            [
+                (
+                    (1, 1),
+                    "400 Bad Request",
+                    [("Content-Type", "text/plain")],
+                    (ValueError, ValueError("Test error"), None),
+                ),
+                (
+                    (1, 1),
+                    "400 Bad Request",
+                    [("Content-Type", "text/plain")],
+                    (ValueError, ValueError("Test error2"), None),
+                ),
+            ],
+            ValueError,
+            "Test error2",
+        ),
+        (
+            [
+                (
+                    (1, 1),
+                    "400 Bad Request",
+                    [("Content-Type", "text/plain")],
+                    (ValueError, ValueError("Test error"), None),
+                ),
+                ((1, 1), "200 OK", [("Content-Type", "text/plain")], None),
+            ],
+            AssertionError,
+            "Response headers already set!",
+        ),
+        (
+            [
+                (
+                    (1, 1),
+                    "400 Bad Request",
+                    [("Content-Type", "text/plain")],
+                    (ValueError, ValueError("Test error"), None),
+                ),
+                ((1, 1), "400 Bad Request", [("Content-Type", "text/plain")], None),
+            ],
+            AssertionError,
+            "Response headers already set!",
+        ),
+        (
+            [
+                ((1, 1), "200 OK", [("Content-Type", "text/plain")], None),
+                ((1, 1), "200 OK", [("Content-Type", "text/plain")], None),
+            ],
+            AssertionError,
+            "Response headers already set!",
+        ),
+    ],
+)
+def test_start_response_raise_error(
+    connection: Connection,
+    response_params: tuple[tuple[int, int], str, list[tuple[str, str]], ExcInfo | None],
+    error_type: type[Exception],
+    error_message: str,
+):
+    with pytest.raises(error_type, match=error_message):
+        for protocol_version, status, headers, exc_info in response_params:
+            write = connection.start_response(
+                protocol_version=protocol_version,
+                status=status,
+                headers=headers,
+                exc_info=exc_info,
+            )
+            write(b"")
