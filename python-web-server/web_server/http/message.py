@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from typing import IO
 
 from web_server.http.body import RequestBody
 
@@ -24,3 +25,17 @@ class Request:
         self.headers = headers
         self.body = body
         self.trailers = trailers
+
+
+class Response:
+    def __init__(
+        self,
+        version: tuple[int, int],
+        status: str,
+        headers: Sequence[tuple[str, str]],
+        body: IO[bytes],
+    ):
+        self.version = version
+        self.status = status
+        self.headers = headers
+        self.body = body
