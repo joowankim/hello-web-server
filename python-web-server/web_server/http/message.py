@@ -1,4 +1,4 @@
-from typing import IO
+from typing import IO, Self
 
 from web_server.http.body import RequestBody
 
@@ -32,9 +32,23 @@ class Response:
         version: tuple[int, int],
         status: str,
         headers: list[tuple[str, str]],
-        body: IO[bytes],
+        body: IO[bytes] | None,
     ):
         self.version = version
         self.status = status
         self.headers = headers
         self.body = body
+
+    @classmethod
+    def draft(
+        cls,
+        protocol_version: tuple[int, int],
+        status: str,
+        headers: list[tuple[str, str]],
+    ) -> Self:
+        return cls(
+            version=protocol_version,
+            status=status,
+            headers=headers,
+            body=None,
+        )
