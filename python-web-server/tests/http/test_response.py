@@ -1,49 +1,140 @@
+from unittest import mock
+
 import pytest
 
-from web_server.http import Response
+from web_server.http import Response, Request, RequestBody
+
+
+@pytest.fixture
+def req(request: pytest.FixtureRequest) -> Request:
+    method, version, headers = request.param
+    fake_request_body = mock.Mock(spec=RequestBody)
+    return Request(
+        method=method,
+        path="/path/to/resource",
+        query="query=string",
+        fragment="fragment",
+        version=version,
+        headers=headers,
+        body=fake_request_body,
+        trailers=[],
+    )
 
 
 @pytest.mark.parametrize(
-    "protocol_version, status, headers, expected",
+    "req, expected",
     [
         (
-            (1, 0),
-            "200 OK",
-            [("Content-Type", "text/plain")],
-            ((1, 0), "200 OK", [("Content-Type", "text/plain")]),
+            (
+                "GET",
+                (1, 0),
+                [("Content-Type", "text/plain")],
+            ),
+            (
+                (1, 0),
+                [
+                    ("Date", "Thu, 03 Jul 2025 03:10:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "close"),
+                ],
+            ),
         ),
         (
-            (1, 1),
-            "404 Not Found",
-            [("Content-Type", "text/html")],
-            ((1, 1), "404 Not Found", [("Content-Type", "text/html")]),
+            (
+                "GET",
+                (1, 1),
+                [("Content-Type", "text/plain")],
+            ),
+            (
+                (1, 1),
+                [
+                    ("Date", "Thu, 03 Jul 2025 03:10:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                ],
+            ),
         ),
         (
-            (2, 0),
-            "500 Internal Server Error",
-            [("Content-Type", "application/json")],
+            (
+                "GET",
+                (2, 0),
+                [("Content-Type", "application/json")],
+            ),
             (
                 (2, 0),
-                "500 Internal Server Error",
-                [("Content-Type", "application/json")],
+                [
+                    ("Date", "Thu, 03 Jul 2025 03:10:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                ],
+            ),
+        ),
+        (
+            (
+                "GET",
+                (1, 1),
+                [("Connection", "close")],
+            ),
+            (
+                (1, 1),
+                [
+                    ("Date", "Thu, 03 Jul 2025 03:10:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "close"),
+                ],
+            ),
+        ),
+        (
+            (
+                "POST",
+                (1, 1),
+                [
+                    ("Transfer-Encoding", "chunked"),
+                    ("Content-Length", "10"),
+                ],
+            ),
+            (
+                (1, 1),
+                [
+                    ("Date", "Thu, 03 Jul 2025 03:10:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "close"),
+                ],
+            ),
+        ),
+        (
+            (
+                "GET",
+                (1, 1),
+                [
+                    ("Connection", "upgrade"),
+                    ("Upgrade", "websocket"),
+                ],
+            ),
+            (
+                (1, 1),
+                [
+                    ("Date", "Thu, 03 Jul 2025 03:10:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Upgrade", "websocket"),
+                    ("Connection", "upgrade"),
+                ],
             ),
         ),
     ],
+    indirect=["req"],
 )
 def test_draft(
-    protocol_version: tuple[int, int],
-    status: str,
-    headers: list[tuple[str, str]],
-    expected: tuple[tuple[int, int], str, list[tuple[str, str]]],
+    req: Request,
+    expected: tuple[tuple[int, int], list[tuple[str, str]]],
 ):
-    response = Response.draft(
-        protocol_version=protocol_version,
-        status=status,
-        headers=headers,
-    )
+    with mock.patch(
+        "email.utils.formatdate", return_value="Thu, 03 Jul 2025 03:10:00 -0000"
+    ):
+        response = Response.draft(req)
 
-    version, status, headers = expected
-    assert response.version == version
-    assert response.status == status
-    assert response.headers == headers
-    assert response.body is None
+        version, headers = expected
+        assert response.version == version
+        assert response.status is None
+        assert response.headers == headers
+        assert response.body is None
