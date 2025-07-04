@@ -264,3 +264,61 @@ def test_extend_headers_with_invalid_header(
 ):
     with pytest.raises(InvalidHeader, match=error_message):
         resp.extend_headers(headers)
+
+
+@pytest.mark.parametrize(
+    "resp, status, expected_status",
+    [
+        (
+            (
+                (1, 1),
+                None,
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                ],
+            ),
+            "200 OK",
+            "200 OK",
+        ),
+        (
+            (
+                (1, 0),
+                None,
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "close"),
+                ],
+            ),
+            "404 Not Found",
+            "404 Not Found",
+        ),
+    ],
+    indirect=["resp"],
+)
+def test_set_status(resp: Response, status: str, expected_status: str):
+    resp.set_status(status)
+
+    assert resp.status == expected_status
+
+
+@pytest.mark.parametrize(
+    "resp",
+    [
+        (
+            (1, 1),
+            "200 OK",
+            [
+                ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                ("Server", "hello-web-server"),
+                ("Connection", "keep-alive"),
+            ],
+        ),
+    ],
+    indirect=["resp"],
+)
+def test_set_status_with_already_set_status(resp: Response):
+    with pytest.raises(AssertionError, match="Response status already set!"):
+        resp.set_status("404 Not Found")

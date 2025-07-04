@@ -122,3 +122,8 @@ class Response:
                 raise InvalidHeader(name)
             new_headers[name.upper().replace("_", "-")] = value
         self.headers = [(name.title(), value) for name, value in new_headers.items()]
+
+    def set_status(self, status: str) -> None:
+        if self.status is not None:
+            raise AssertionError("Response status already set!")
+        self.status = status
