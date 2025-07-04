@@ -2,8 +2,7 @@ from collections.abc import Callable, Iterable
 from types import TracebackType
 from typing import Any
 
-from web_server import wsgi, connection
-
+from web_server import wsgi, connection, http
 
 ExcInfo = tuple[type[BaseException] | None, BaseException | None, TracebackType | None]
 
@@ -39,13 +38,15 @@ class Cycle:
                 raise AssertionError("Response headers already set!")
             raise exc_info[1].with_traceback(exc_info[2])
 
-        status_line = f"{self.environ.server_protocol} {status}\r\n"
-        header_fields = "".join(f"{name}: {value}\r\n" for name, value in headers)
+        resp = http.Response.draft(self.environ.http_request)
+        resp.set_status(status)
+        resp.extend_headers(headers)
 
         def _write(data: bytes) -> None:
-            headers = (status_line + header_fields).encode("latin-1") + b"\r\n"
-            self.conn.sock.sendall(headers)
-            self._sent_headers.append(headers)
+            resp.set_body([data])
+            sent_headers = resp.headers_data()
+            self.conn.sock.sendall(sent_headers)
+            self._sent_headers.append(sent_headers)
             self.conn.sock.sendall(data)
 
         return _write

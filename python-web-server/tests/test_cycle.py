@@ -68,7 +68,15 @@ def cycle(
             ),
             b"Hello, World!",
             [
-                mock.call(b"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n"),
+                mock.call(
+                    b"HTTP/1.1 200 OK\r\n"
+                    b"Date: Fri, 04 Jul 2025 10:00:00 GMT\r\n"
+                    b"Server: hello-web-server\r\n"
+                    b"Connection: keep-alive\r\n"
+                    b"Content-Type: text/plain\r\n"
+                    b"Content-Length: 13\r\n"
+                    b"\r\n"
+                ),
                 mock.call(b"Hello, World!"),
             ],
         ),
@@ -81,7 +89,15 @@ def cycle(
             ),
             b"<h1>Not Found</h1>",
             [
-                mock.call(b"HTTP/1.0 404 Not Found\r\nContent-Type: text/html\r\n\r\n"),
+                mock.call(
+                    b"HTTP/1.0 404 Not Found\r\n"
+                    b"Date: Fri, 04 Jul 2025 10:00:00 GMT\r\n"
+                    b"Server: hello-web-server\r\n"
+                    b"Connection: close\r\n"
+                    b"Content-Type: text/html\r\n"
+                    b"Content-Length: 18\r\n"
+                    b"\r\n"
+                ),
                 mock.call(b"<h1>Not Found</h1>"),
             ],
         ),
@@ -95,7 +111,13 @@ def cycle(
             b'{"error": "Internal Server Error"}',
             [
                 mock.call(
-                    b"HTTP/2.0 500 Internal Server Error\r\nContent-Type: application/json\r\n\r\n"
+                    b"HTTP/2.0 500 Internal Server Error\r\n"
+                    b"Date: Fri, 04 Jul 2025 10:00:00 GMT\r\n"
+                    b"Server: hello-web-server\r\n"
+                    b"Connection: keep-alive\r\n"
+                    b"Content-Type: application/json\r\n"
+                    b"Content-Length: 34\r\n"
+                    b"\r\n"
                 ),
                 mock.call(b'{"error": "Internal Server Error"}'),
             ],
@@ -110,7 +132,13 @@ def cycle(
             b"Hello, World!",
             [
                 mock.call(
-                    b"HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\n\r\n"
+                    b"HTTP/1.1 400 Bad Request\r\n"
+                    b"Date: Fri, 04 Jul 2025 10:00:00 GMT\r\n"
+                    b"Server: hello-web-server\r\n"
+                    b"Connection: keep-alive\r\n"
+                    b"Content-Type: text/plain\r\n"
+                    b"Content-Length: 13\r\n"
+                    b"\r\n"
                 ),
                 mock.call(b"Hello, World!"),
             ],
@@ -125,10 +153,13 @@ def test_start_response(
     mock_sock: mock.Mock,
     expected: MockCallList,
 ):
-    write = cycle.start_response(*response_params)
-    mock_sock.sendall.assert_not_called()
-    write(response_body)
-    mock_sock.sendall.assert_has_calls(expected)
+    with mock.patch(
+        "email.utils.formatdate", return_value="Fri, 04 Jul 2025 10:00:00 GMT"
+    ):
+        write = cycle.start_response(*response_params)
+        mock_sock.sendall.assert_not_called()
+        write(response_body)
+        mock_sock.sendall.assert_has_calls(expected)
 
 
 @pytest.mark.parametrize(
@@ -146,7 +177,15 @@ def test_start_response(
             ],
             b"<h1>Not Found</h1>",
             [
-                mock.call(b"HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n"),
+                mock.call(
+                    b"HTTP/1.1 404 Not Found\r\n"
+                    b"Date: Fri, 04 Jul 2025 10:00:00 GMT\r\n"
+                    b"Server: hello-web-server\r\n"
+                    b"Connection: keep-alive\r\n"
+                    b"Content-Type: text/html\r\n"
+                    b"Content-Length: 18\r\n"
+                    b"\r\n"
+                ),
                 mock.call(b"<h1>Not Found</h1>"),
             ],
         ),
@@ -167,7 +206,13 @@ def test_start_response(
             b"{'error': 'Internal Server Error'}",
             [
                 mock.call(
-                    b"HTTP/1.1 500 Internal Server Error\r\nContent-Type: application/json\r\n\r\n"
+                    b"HTTP/1.1 500 Internal Server Error\r\n"
+                    b"Date: Fri, 04 Jul 2025 10:00:00 GMT\r\n"
+                    b"Server: hello-web-server\r\n"
+                    b"Connection: keep-alive\r\n"
+                    b"Content-Type: application/json\r\n"
+                    b"Content-Length: 34\r\n"
+                    b"\r\n"
                 ),
                 mock.call(b"{'error': 'Internal Server Error'}"),
             ],
@@ -184,16 +229,19 @@ def test_start_response_duplication_called(
 ):
     write = lambda *args: None  # noqa: E731, dummy write function to avoid TypeError
 
-    for status, headers, exc_info in response_params:
-        write = cycle.start_response(
-            status=status,
-            headers=headers,
-            exc_info=exc_info,
-        )
-        mock_sock.sendall.assert_not_called()
-        mock_sock.sendall.assert_has_calls(b"")
-    write(response_body)
-    mock_sock.sendall.assert_has_calls(expected)
+    with mock.patch(
+        "email.utils.formatdate", return_value="Fri, 04 Jul 2025 10:00:00 GMT"
+    ):
+        for status, headers, exc_info in response_params:
+            write = cycle.start_response(
+                status=status,
+                headers=headers,
+                exc_info=exc_info,
+            )
+            mock_sock.sendall.assert_not_called()
+            mock_sock.sendall.assert_has_calls(b"")
+        write(response_body)
+        mock_sock.sendall.assert_has_calls(expected)
 
 
 @pytest.mark.parametrize(
