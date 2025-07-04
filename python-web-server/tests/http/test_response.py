@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from unittest import mock
 
 import pytest
@@ -322,3 +323,92 @@ def test_set_status(resp: Response, status: str, expected_status: str):
 def test_set_status_with_already_set_status(resp: Response):
     with pytest.raises(AssertionError, match="Response status already set!"):
         resp.set_status("404 Not Found")
+
+
+@pytest.mark.parametrize(
+    "resp, response_body, expected",
+    [
+        (
+            (
+                (1, 1),
+                "200 OK",
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                ],
+            ),
+            [b"Hello, ", b"World!"],
+            (
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                    ("Content-Length", "13"),
+                ],
+                [b"Hello, ", b"World!"],
+            ),
+        ),
+        (
+            (
+                (1, 0),
+                "404 Not Found",
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "close"),
+                ],
+            ),
+            [b"<h1>Not Found</h1>"],
+            (
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "close"),
+                    ("Content-Length", "18"),
+                ],
+                [b"<h1>Not Found</h1>"],
+            ),
+        ),
+    ],
+    indirect=["resp"],
+)
+def test_set_body(
+    resp: Response,
+    response_body: Iterable[bytes],
+    expected: tuple[list[tuple[str, str]], list[bytes]],
+):
+    resp.set_body(response_body)
+
+    assert (resp.headers, list(resp.body)) == expected
+
+
+@pytest.mark.parametrize(
+    "resp, response_body, error_type, error_message",
+    [
+        (
+            (
+                (1, 1),
+                "200 OK",
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                    ("Content-Length", "11"),
+                ],
+            ),
+            [b"Hello, ", b"World!"],
+            ValueError,
+            "Content-Length is wrong: expected 13, got 11",
+        ),
+    ],
+    indirect=["resp"],
+)
+def test_set_body_with_invalid_body(
+    resp: Response,
+    response_body: Iterable[bytes],
+    error_type: type[Exception],
+    error_message: str,
+):
+    with pytest.raises(error_type, match=error_message):
+        resp.set_body(response_body)

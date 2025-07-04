@@ -1,6 +1,7 @@
 import email.utils
 import time
-from typing import IO, Self, ClassVar
+from collections.abc import Iterable
+from typing import Self, ClassVar
 
 from web_server import constants
 from web_server.http.body import RequestBody
@@ -78,7 +79,7 @@ class Response:
         version: tuple[int, int],
         status: str | None,
         headers: list[tuple[str, str]],
-        body: IO[bytes] | None,
+        body: Iterable[bytes] | None,
     ):
         self.version = version
         self.status = status
@@ -127,3 +128,21 @@ class Response:
         if self.status is not None:
             raise AssertionError("Response status already set!")
         self.status = status
+
+    def set_body(self, body: Iterable[bytes]) -> None:
+        content_length = next(
+            (
+                value
+                for name, value in self.headers
+                if name.upper().replace("_", "-") == "CONTENT-LENGTH"
+            ),
+            None,
+        )
+        body_length = sum(len(chunk) for chunk in body)
+        if content_length is None:
+            self.headers.append(("Content-Length", str(body_length)))
+        elif int(content_length) != body_length:
+            raise ValueError(
+                f"Content-Length is wrong: expected {body_length}, got {content_length}"
+            )
+        self.body = body
