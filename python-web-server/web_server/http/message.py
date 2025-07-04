@@ -98,3 +98,11 @@ class Response:
             headers=headers,
             body=None,
         )
+
+    def extend_headers(self, headers: list[tuple[str, str]]) -> None:
+        new_headers = {
+            name.upper().replace("_", "-"): value for name, value in self.headers
+        }
+        for name, value in headers:
+            new_headers[name.upper().replace("_", "-")] = value
+        self.headers = [(name.title(), value) for name, value in new_headers.items()]

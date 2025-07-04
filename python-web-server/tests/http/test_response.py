@@ -138,3 +138,87 @@ def test_draft(
         assert response.status is None
         assert response.headers == headers
         assert response.body is None
+
+
+@pytest.fixture
+def resp(request: pytest.FixtureRequest) -> Response:
+    version, status, headers = request.param
+    return Response(
+        version=version,
+        status=status,
+        headers=headers,
+        body=None,
+    )
+
+
+@pytest.mark.parametrize(
+    "resp, headers, expected_headers",
+    [
+        (
+            (
+                (1, 1),
+                None,
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                ],
+            ),
+            [("Content-Type", "text/plain")],
+            [
+                ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                ("Server", "hello-web-server"),
+                ("Connection", "keep-alive"),
+                ("Content-Type", "text/plain"),
+            ],
+        ),
+        (
+            (
+                (1, 0),
+                "404 Not Found",
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "close"),
+                ],
+            ),
+            [("Content-Type", "text/html")],
+            [
+                ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                ("Server", "hello-web-server"),
+                ("Connection", "close"),
+                ("Content-Type", "text/html"),
+            ],
+        ),
+        (
+            (
+                (2, 0),
+                "500 Internal Server Error",
+                [
+                    ("Date", "Thu, 03 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                ],
+            ),
+            [
+                ("Date", "Thu, 04 Jul 2025 12:00:00 -0000"),
+                ("Content-Type", "application/json"),
+            ],
+            [
+                ("Date", "Thu, 04 Jul 2025 12:00:00 -0000"),
+                ("Server", "hello-web-server"),
+                ("Connection", "keep-alive"),
+                ("Content-Type", "application/json"),
+            ],
+        ),
+    ],
+    indirect=["resp"],
+)
+def test_extend_headers(
+    resp: Response,
+    headers: list[tuple[str, str]],
+    expected_headers: list[tuple[str, str]],
+):
+    resp.extend_headers(headers)
+
+    assert resp.headers == expected_headers
