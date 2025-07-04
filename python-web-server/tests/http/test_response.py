@@ -3,6 +3,7 @@ from unittest import mock
 import pytest
 
 from web_server.http import Response, Request, RequestBody
+from web_server.http.errors import InvalidHeader
 
 
 @pytest.fixture
@@ -198,14 +199,14 @@ def resp(request: pytest.FixtureRequest) -> Response:
                     ("Date", "Thu, 03 Jul 2025 10:00:00 -0000"),
                     ("Server", "hello-web-server"),
                     ("Connection", "keep-alive"),
+                    ("Content-Type", "text/plain"),
                 ],
             ),
             [
-                ("Date", "Thu, 04 Jul 2025 12:00:00 -0000"),
                 ("Content-Type", "application/json"),
             ],
             [
-                ("Date", "Thu, 04 Jul 2025 12:00:00 -0000"),
+                ("Date", "Thu, 03 Jul 2025 10:00:00 -0000"),
                 ("Server", "hello-web-server"),
                 ("Connection", "keep-alive"),
                 ("Content-Type", "application/json"),
@@ -222,3 +223,44 @@ def test_extend_headers(
     resp.extend_headers(headers)
 
     assert resp.headers == expected_headers
+
+
+@pytest.mark.parametrize(
+    "resp, headers, error_message",
+    [
+        (
+            (
+                (1, 1),
+                None,
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                ],
+            ),
+            [
+                ("Connection", "close"),
+            ],
+            "Invalid HTTP Header: 'Connection'",
+        ),
+        (
+            (
+                (1, 0),
+                "404 Not Found",
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "close"),
+                ],
+            ),
+            [("Transfer-Encoding", "chunked")],
+            "Invalid HTTP Header: 'Transfer-Encoding'",
+        ),
+    ],
+    indirect=["resp"],
+)
+def test_extend_headers_with_invalid_header(
+    resp: Response, headers: list[tuple[str, str]], error_message: str
+):
+    with pytest.raises(InvalidHeader, match=error_message):
+        resp.extend_headers(headers)

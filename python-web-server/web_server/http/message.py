@@ -1,9 +1,10 @@
 import email.utils
 import time
-from typing import IO, Self
+from typing import IO, Self, ClassVar
 
 from web_server import constants
 from web_server.http.body import RequestBody
+from web_server.http.errors import InvalidHeader
 
 
 class Request:
@@ -59,6 +60,19 @@ class Request:
 
 
 class Response:
+    hob_by_hob_headers: ClassVar[set[str]] = {
+        "connection",
+        "keep-alive",
+        "proxy-authenticate",
+        "proxy-authorization",
+        "te",
+        "trailers",
+        "transfer-encoding",
+        "upgrade",
+        "server",
+        "date",
+    }
+
     def __init__(
         self,
         version: tuple[int, int],
@@ -104,5 +118,7 @@ class Response:
             name.upper().replace("_", "-"): value for name, value in self.headers
         }
         for name, value in headers:
+            if name.lower().replace("_", "-") in self.hob_by_hob_headers:
+                raise InvalidHeader(name)
             new_headers[name.upper().replace("_", "-")] = value
         self.headers = [(name.title(), value) for name, value in new_headers.items()]
