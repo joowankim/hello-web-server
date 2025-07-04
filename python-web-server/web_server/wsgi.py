@@ -1,3 +1,4 @@
+import collections
 import dataclasses
 import io
 import sys
@@ -44,9 +45,12 @@ class WSGIEnviron:
     script_name: str
     path_info: str
     query_string: str
+    content_type: str | None
+    content_length: str | None
     server_name: str
     server_port: str
     server_protocol: str
+    http_headers: list[tuple[str, str]]
     wsgi_version: tuple[int, int]
     wsgi_url_scheme: str
     wsgi_input: http.RequestBody
@@ -55,16 +59,56 @@ class WSGIEnviron:
     wsgi_multiprocess: bool
     wsgi_run_once: bool
 
+    @property
+    def http_request(self) -> http.Request:
+        headers = [
+            (name[5:].replace("_", "-").title(), value)
+            for name, value in self.http_headers
+        ]
+        if self.content_type is not None:
+            headers.append(("Content-Type", self.content_type))
+        if self.content_length is not None:
+            headers.append(("Content-Length", self.content_length))
+        return http.Request(
+            method=self.request_method,
+            path=f"{self.script_name}{self.path_info}",
+            query=self.query_string,
+            fragment="",
+            version=self.wsgi_version,
+            headers=headers,
+            body=self.wsgi_input,
+            trailers=[],
+        )
+
     @classmethod
     def build(
         cls, cfg: config.Config, server: tuple[str, str], request: http.Request
     ) -> Self:
         script_name, path_info = cfg.parse_path(request.path)
+        http_header_list = []
+        content_type = None
+        content_length = None
+        for name, value in request.headers:
+            uname = name.upper().replace("-", "_")
+            if uname == "CONTENT_TYPE":
+                content_type = value
+                continue
+            elif uname == "CONTENT_LENGTH":
+                content_length = value
+                continue
+            http_header_list.append((f"HTTP_{uname}", value))
+        http_headers_dict = collections.defaultdict(list)
+        for name, value in http_header_list:
+            http_headers_dict[name].append(value)
+        http_headers = [
+            (name, ",".join(value)) for name, value in http_headers_dict.items()
+        ]
         return cls(
             request_method=request.method,
             script_name=script_name,
             path_info=path_info,
             query_string=request.query,
+            http_headers=http_headers,
             server_name=server[0],
             server_port=server[1],
             server_protocol=f"HTTP/{request.version[0]}.{request.version[1]}",
@@ -75,14 +119,18 @@ class WSGIEnviron:
             wsgi_multithread=False,
             wsgi_multiprocess=False,
             wsgi_run_once=False,
+            content_type=content_type,
+            content_length=content_length,
         )
 
     def dict(self) -> dict[str, Any]:
-        return {
+        base_environ = {
             "REQUEST_METHOD": self.request_method,
             "SCRIPT_NAME": self.script_name,
             "PATH_INFO": self.path_info,
             "QUERY_STRING": self.query_string,
+            "CONTENT_TYPE": self.content_type,
+            "CONTENT_LENGTH": self.content_length,
             "SERVER_NAME": self.server_name,
             "SERVER_PORT": self.server_port,
             "SERVER_PROTOCOL": self.server_protocol,
@@ -94,3 +142,4 @@ class WSGIEnviron:
             "wsgi.multiprocess": self.wsgi_multiprocess,
             "wsgi.run_once": self.wsgi_run_once,
         }
+        return base_environ | {name: value for name, value in self.http_headers}
