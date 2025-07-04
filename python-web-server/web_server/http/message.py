@@ -146,3 +146,12 @@ class Response:
                 f"Content-Length is wrong: expected {body_length}, got {content_length}"
             )
         self.body = body
+
+    def headers_data(self) -> bytes:
+        if self.status is None:
+            raise AssertionError("Response status not set!")
+        if self.body is None:
+            raise AssertionError("Response body not set!")
+        status_line = f"HTTP/{self.version[0]}.{self.version[1]} {self.status}\r\n"
+        header_fields = "".join(f"{name}: {value}\r\n" for name, value in self.headers)
+        return (status_line + header_fields).encode("latin-1") + b"\r\n"

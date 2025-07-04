@@ -412,3 +412,114 @@ def test_set_body_with_invalid_body(
 ):
     with pytest.raises(error_type, match=error_message):
         resp.set_body(response_body)
+
+
+@pytest.fixture
+def body_written_response(request: pytest.FixtureRequest) -> Response:
+    version, status, headers, body = request.param
+    return Response(
+        version=version,
+        status=status,
+        headers=headers,
+        body=body,
+    )
+
+
+@pytest.mark.parametrize(
+    "body_written_response, expected",
+    [
+        (
+            (
+                (1, 1),
+                "200 OK",
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                    ("Content-Length", "13"),
+                ],
+                [b"Hello, world!"],
+            ),
+            b"HTTP/1.1 200 OK\r\nDate: Thu, 04 Jul 2025 10:00:00 -0000\r\n"
+            b"Server: hello-web-server\r\nConnection: keep-alive\r\n"
+            b"Content-Length: 13\r\n\r\n",
+        ),
+        (
+            (
+                (1, 0),
+                "404 Not Found",
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "close"),
+                    ("Content-Length", "18"),
+                ],
+                [b"<h1>Not Found</h1>"],
+            ),
+            b"HTTP/1.0 404 Not Found\r\nDate: Thu, 04 Jul 2025 10:00:00 -0000\r\n"
+            b"Server: hello-web-server\r\nConnection: close\r\n"
+            b"Content-Length: 18\r\n\r\n",
+        ),
+        (
+            (
+                (2, 0),
+                "500 Internal Server Error",
+                [
+                    ("Date", "Thu, 03 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                    ("Content-Type", "application/json"),
+                    ("Content-Length", "34"),
+                ],
+                [b"{'error': 'Internal Server Error'}"],
+            ),
+            b"HTTP/2.0 500 Internal Server Error\r\nDate: Thu, 03 Jul 2025 "
+            b"10:00:00 -0000\r\nServer: hello-web-server\r\n"
+            b"Connection: keep-alive\r\nContent-Type: application/json\r\n"
+            b"Content-Length: 34\r\n\r\n",
+        ),
+    ],
+    indirect=["body_written_response"],
+)
+def test_headers_data(body_written_response: Response, expected: bytes):
+    assert body_written_response.headers_data() == expected
+
+
+@pytest.mark.parametrize(
+    "body_written_response, error_message",
+    [
+        (
+            (
+                (1, 1),
+                None,
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                ],
+                [b"Hello, world!"],
+            ),
+            "Response status not set!",
+        ),
+        (
+            (
+                (1, 0),
+                "404 Not Found",
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "close"),
+                ],
+                None,
+            ),
+            "Response body not set!",
+        ),
+    ],
+    indirect=["body_written_response"],
+)
+def test_headers_data_with_invalid_response(
+    body_written_response: Response,
+    error_message: str,
+):
+    with pytest.raises(AssertionError, match=error_message):
+        body_written_response.headers_data()
