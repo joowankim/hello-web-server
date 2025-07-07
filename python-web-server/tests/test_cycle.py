@@ -9,7 +9,7 @@ from tests.conftest import MockCallList
 from web_server.config import Config
 from web_server.connection import Connection
 from web_server.cycle import Cycle, ExcInfo
-from web_server.http import Request, RequestBody
+from web_server.http import Request, RequestBody, Response
 from web_server.wsgi import WSGIEnviron
 
 
@@ -329,3 +329,73 @@ def test_start_response_raise_error(
                 exc_info=exc_info,
             )
             write(b"")
+
+
+@pytest.fixture
+def response_ready_cycle(
+    mock_sock: mock.Mock,
+    request_factory: Callable[[tuple[int, int]], Request],
+    request: pytest.FixtureRequest,
+) -> Cycle:
+    protocol_version, status, headers, resp_body = request.param
+    req = request_factory(protocol_version)
+    conn = Connection(sock=mock_sock)
+    environ = WSGIEnviron.build(
+        cfg=Config.default(), server=("localhost", "8000"), request=req
+    )
+    cycle = Cycle(
+        conn=conn,
+        environ=environ,
+        app=support.app,
+    )
+    cycle.resp = Response(
+        version=protocol_version,
+        status=status,
+        headers=headers,
+        body=resp_body,
+    )
+    return cycle
+
+
+@pytest.mark.parametrize(
+    "response_ready_cycle, data, expected",
+    [
+        (
+            (
+                (1, 1),
+                "200 OK",
+                [
+                    ("Date", "Fri, 07 Jul 2025 10:00:00 GMT"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                    ("Content-Type", "text/plain"),
+                    ("Content-Length", "13"),
+                ],
+                [b"Hello, World!"],
+            ),
+            b"Hello, World!",
+            [
+                mock.call(
+                    b"HTTP/1.1 200 OK\r\n"
+                    b"Date: Fri, 07 Jul 2025 10:00:00 GMT\r\n"
+                    b"Server: hello-web-server\r\n"
+                    b"Connection: keep-alive\r\n"
+                    b"Content-Type: text/plain\r\n"
+                    b"Content-Length: 13\r\n"
+                    b"\r\n"
+                ),
+                mock.call(b"Hello, World!"),
+            ],
+        ),
+    ],
+    indirect=["response_ready_cycle"],
+)
+def test_write(
+    response_ready_cycle: Cycle,
+    data: bytes,
+    mock_sock: mock.Mock,
+    expected: MockCallList,
+):
+    response_ready_cycle.write(data)
+
+    mock_sock.sendall.assert_has_calls(expected)
