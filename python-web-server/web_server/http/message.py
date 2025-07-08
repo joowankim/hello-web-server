@@ -86,6 +86,14 @@ class Response:
         self.headers = headers
         self.body = body
 
+    @property
+    def is_chunked(self) -> bool:
+        return any(
+            name.upper().replace("_", "-") == "TRANSFER-ENCODING"
+            and value.lower() == "chunked"
+            for name, value in self.headers
+        )
+
     @classmethod
     def draft(cls, request: Request) -> Self:
         http_date = email.utils.formatdate(time.time(), localtime=False, usegmt=True)

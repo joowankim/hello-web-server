@@ -559,3 +559,39 @@ def test_headers_data_with_invalid_response(
 ):
     with pytest.raises(AssertionError, match=error_message):
         body_written_response.headers_data()
+
+
+@pytest.mark.parametrize(
+    "resp, expected",
+    [
+        (
+            (
+                (1, 1),
+                "200 OK",
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                    ("Content-Length", "13"),
+                ],
+            ),
+            False,
+        ),
+        (
+            (
+                (1, 1),
+                "200 OK",
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                    ("Transfer-Encoding", "chunked"),
+                ],
+            ),
+            True,
+        ),
+    ],
+    indirect=["resp"],
+)
+def test_is_chunked(resp: Response, expected: bool):
+    assert resp.is_chunked == expected
