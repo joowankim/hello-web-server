@@ -158,24 +158,6 @@ def resp(request: pytest.FixtureRequest) -> Response:
     [
         (
             (
-                (1, 1),
-                None,
-                [
-                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
-                    ("Server", "hello-web-server"),
-                    ("Connection", "keep-alive"),
-                ],
-            ),
-            [("Content-Type", "text/plain")],
-            [
-                ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
-                ("Server", "hello-web-server"),
-                ("Connection", "keep-alive"),
-                ("Content-Type", "text/plain"),
-            ],
-        ),
-        (
-            (
                 (1, 0),
                 "404 Not Found",
                 [
@@ -209,7 +191,7 @@ def resp(request: pytest.FixtureRequest) -> Response:
             [
                 ("Date", "Thu, 03 Jul 2025 10:00:00 -0000"),
                 ("Server", "hello-web-server"),
-                ("Connection", "keep-alive"),
+                ("Connection", "close"),
                 ("Content-Type", "application/json"),
             ],
         ),
@@ -663,3 +645,60 @@ def test_body_stream(body_written_response: Response, expected: list[bytes]):
     stream = list(body_written_response.body_stream())
 
     assert stream == expected
+
+
+@pytest.mark.parametrize(
+    "resp, expected",
+    [
+        (
+            (
+                (1, 1),
+                "200 OK",
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                ],
+            ),
+            True,
+        ),
+        (
+            (
+                (1, 0),
+                "404 Not Found",
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "close"),
+                ],
+            ),
+            True,
+        ),
+        (
+            (
+                (2, 0),
+                "500 Internal Server Error",
+                [
+                    ("Date", "Thu, 03 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                ],
+            ),
+            True,
+        ),
+        (
+            (
+                (1, 1),
+                "100 Informational",
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                ],
+            ),
+            False,
+        ),
+    ],
+    indirect=["resp"],
+)
+def test_should_conn_close(resp: Response, expected: bool):
+    assert resp.should_conn_close() == expected

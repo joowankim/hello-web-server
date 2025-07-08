@@ -62,5 +62,7 @@ class Cycle:
     def handle_request(self) -> None:
         response_body = self.app(self.environ.dict(), self.start_response)
         self.resp.set_body(response_body)
+        if not self.headers_sent:
+            self.conn.sock.sendall(self.resp.headers_data())
         for data in self.resp.body_stream():
             self.conn.sock.sendall(data)
