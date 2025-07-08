@@ -138,12 +138,27 @@ class Response:
             ),
             None,
         )
-        body_length = sum(len(chunk) for chunk in body)
-        if content_length is None:
-            self.headers.append(("Content-Length", str(body_length)))
-        elif int(content_length) != body_length:
+        transfer_encoding = next(
+            (
+                value
+                for name, value in self.headers
+                if name.upper().replace("_", "-") == "TRANSFER-ENCODING"
+            ),
+            None,
+        )
+        body_iter = iter(body)
+        body_length = len(next(body_iter))
+        if content_length is not None and int(content_length) != body_length:
             raise ValueError(
                 f"Content-Length is wrong: expected {body_length}, got {content_length}"
+            )
+        if transfer_encoding is None and content_length is None:
+            content_length = body_length
+            self.headers.append(("Content-Length", str(body_length)))
+
+        if content_length is not None and next(body_iter) is not None:
+            raise ValueError(
+                "Content-Length data must be a single byte string, not multiple chunks"
             )
         self.body = body
 

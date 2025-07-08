@@ -338,7 +338,7 @@ def test_set_status_with_already_set_status(resp: Response):
                     ("Connection", "keep-alive"),
                 ],
             ),
-            [b"Hello, ", b"World!"],
+            [b"Hello, World!"],
             (
                 [
                     ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
@@ -346,7 +346,7 @@ def test_set_status_with_already_set_status(resp: Response):
                     ("Connection", "keep-alive"),
                     ("Content-Length", "13"),
                 ],
-                [b"Hello, ", b"World!"],
+                [b"Hello, World!"],
             ),
         ),
         (
@@ -368,6 +368,28 @@ def test_set_status_with_already_set_status(resp: Response):
                     ("Content-Length", "18"),
                 ],
                 [b"<h1>Not Found</h1>"],
+            ),
+        ),
+        (
+            (
+                (1, 1),
+                "200 OK",
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                    ("Transfer-Encoding", "chunked"),
+                ],
+            ),
+            [b"Hello, ", b"World!"],
+            (
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                    ("Transfer-Encoding", "chunked"),
+                ],
+                [b"Hello, ", b"World!"],
             ),
         ),
     ],
@@ -397,9 +419,23 @@ def test_set_body(
                     ("Content-Length", "11"),
                 ],
             ),
-            [b"Hello, ", b"World!"],
+            [b"Hello, World!"],
             ValueError,
             "Content-Length is wrong: expected 13, got 11",
+        ),
+        (
+            (
+                (1, 1),
+                "200 OK",
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                ],
+            ),
+            [b"Hello, ", b"World!"],
+            ValueError,
+            "Content-Length data must be a single byte string, not multiple chunks",
         ),
     ],
     indirect=["resp"],
