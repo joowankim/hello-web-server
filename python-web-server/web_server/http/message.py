@@ -1,6 +1,6 @@
 import email.utils
 import time
-from collections.abc import Iterable
+from collections.abc import Iterable, Generator
 from typing import Self, ClassVar
 
 from web_server import constants
@@ -178,3 +178,16 @@ class Response:
         status_line = f"HTTP/{self.version[0]}.{self.version[1]} {self.status}\r\n"
         header_fields = "".join(f"{name}: {value}\r\n" for name, value in self.headers)
         return (status_line + header_fields).encode("latin-1") + b"\r\n"
+
+    def body_stream(self) -> Generator[bytes, None, None]:
+        is_chunked = self.is_chunked
+        last_chunk = b"0\r\n\r\n"
+        for data in self.body:
+            if is_chunked:
+                chunk_size = f"{len(data)}\r\n"
+                last_chunk = b"".join([chunk_size.encode("utf-8"), data, b"\r\n"])
+                yield last_chunk
+            else:
+                yield data
+        if is_chunked and last_chunk != b"0\r\n\r\n":
+            yield b"0\r\n\r\n"

@@ -595,3 +595,71 @@ def test_headers_data_with_invalid_response(
 )
 def test_is_chunked(resp: Response, expected: bool):
     assert resp.is_chunked == expected
+
+
+@pytest.mark.parametrize(
+    "body_written_response, expected",
+    [
+        (
+            (
+                (1, 1),
+                "200 OK",
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                    ("Content-Length", "13"),
+                ],
+                [b"Hello, world!"],
+            ),
+            [b"Hello, world!"],
+        ),
+        (
+            (
+                (1, 0),
+                "404 Not Found",
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "close"),
+                    ("Content-Length", "18"),
+                ],
+                [b"<h1>Not Found</h1>"],
+            ),
+            [b"<h1>Not Found</h1>"],
+        ),
+        (
+            (
+                (1, 1),
+                "200 OK",
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                    ("Transfer-Encoding", "chunked"),
+                ],
+                [b"Hello, ", b"world!"],
+            ),
+            [b"7\r\nHello, \r\n", b"6\r\nworld!\r\n", b"0\r\n\r\n"],
+        ),
+        (
+            (
+                (1, 1),
+                "200 OK",
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                    ("Transfer-Encoding", "chunked"),
+                ],
+                [b"Hello, ", b"world!", b""],
+            ),
+            [b"7\r\nHello, \r\n", b"6\r\nworld!\r\n", b"0\r\n\r\n"],
+        ),
+    ],
+    indirect=["body_written_response"],
+)
+def test_body_stream(body_written_response: Response, expected: list[bytes]):
+    stream = list(body_written_response.body_stream())
+
+    assert stream == expected
