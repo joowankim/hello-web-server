@@ -338,7 +338,7 @@ def test_set_status_with_already_set_status(resp: Response):
                     ("Connection", "keep-alive"),
                 ],
             ),
-            [b"Hello, ", b"World!"],
+            [b"Hello, World!"],
             (
                 [
                     ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
@@ -346,7 +346,7 @@ def test_set_status_with_already_set_status(resp: Response):
                     ("Connection", "keep-alive"),
                     ("Content-Length", "13"),
                 ],
-                [b"Hello, ", b"World!"],
+                [b"Hello, World!"],
             ),
         ),
         (
@@ -368,6 +368,28 @@ def test_set_status_with_already_set_status(resp: Response):
                     ("Content-Length", "18"),
                 ],
                 [b"<h1>Not Found</h1>"],
+            ),
+        ),
+        (
+            (
+                (1, 1),
+                "200 OK",
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                    ("Transfer-Encoding", "chunked"),
+                ],
+            ),
+            [b"Hello, ", b"World!"],
+            (
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                    ("Transfer-Encoding", "chunked"),
+                ],
+                [b"Hello, ", b"World!"],
             ),
         ),
     ],
@@ -397,9 +419,23 @@ def test_set_body(
                     ("Content-Length", "11"),
                 ],
             ),
-            [b"Hello, ", b"World!"],
+            [b"Hello, World!"],
             ValueError,
             "Content-Length is wrong: expected 13, got 11",
+        ),
+        (
+            (
+                (1, 1),
+                "200 OK",
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                ],
+            ),
+            [b"Hello, ", b"World!"],
+            ValueError,
+            "Content-Length data must be a single byte string, not multiple chunks",
         ),
     ],
     indirect=["resp"],
@@ -523,3 +559,107 @@ def test_headers_data_with_invalid_response(
 ):
     with pytest.raises(AssertionError, match=error_message):
         body_written_response.headers_data()
+
+
+@pytest.mark.parametrize(
+    "resp, expected",
+    [
+        (
+            (
+                (1, 1),
+                "200 OK",
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                    ("Content-Length", "13"),
+                ],
+            ),
+            False,
+        ),
+        (
+            (
+                (1, 1),
+                "200 OK",
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                    ("Transfer-Encoding", "chunked"),
+                ],
+            ),
+            True,
+        ),
+    ],
+    indirect=["resp"],
+)
+def test_is_chunked(resp: Response, expected: bool):
+    assert resp.is_chunked == expected
+
+
+@pytest.mark.parametrize(
+    "body_written_response, expected",
+    [
+        (
+            (
+                (1, 1),
+                "200 OK",
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                    ("Content-Length", "13"),
+                ],
+                [b"Hello, world!"],
+            ),
+            [b"Hello, world!"],
+        ),
+        (
+            (
+                (1, 0),
+                "404 Not Found",
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "close"),
+                    ("Content-Length", "18"),
+                ],
+                [b"<h1>Not Found</h1>"],
+            ),
+            [b"<h1>Not Found</h1>"],
+        ),
+        (
+            (
+                (1, 1),
+                "200 OK",
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                    ("Transfer-Encoding", "chunked"),
+                ],
+                [b"Hello, ", b"world!"],
+            ),
+            [b"7\r\nHello, \r\n", b"6\r\nworld!\r\n", b"0\r\n\r\n"],
+        ),
+        (
+            (
+                (1, 1),
+                "200 OK",
+                [
+                    ("Date", "Thu, 04 Jul 2025 10:00:00 -0000"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                    ("Transfer-Encoding", "chunked"),
+                ],
+                [b"Hello, ", b"world!", b""],
+            ),
+            [b"7\r\nHello, \r\n", b"6\r\nworld!\r\n", b"0\r\n\r\n"],
+        ),
+    ],
+    indirect=["body_written_response"],
+)
+def test_body_stream(body_written_response: Response, expected: list[bytes]):
+    stream = list(body_written_response.body_stream())
+
+    assert stream == expected

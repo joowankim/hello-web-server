@@ -1,6 +1,6 @@
 import email.utils
 import time
-from collections.abc import Iterable
+from collections.abc import Iterable, Generator
 from typing import Self, ClassVar
 
 from web_server import constants
@@ -86,6 +86,14 @@ class Response:
         self.headers = headers
         self.body = body
 
+    @property
+    def is_chunked(self) -> bool:
+        return any(
+            name.upper().replace("_", "-") == "TRANSFER-ENCODING"
+            and value.lower() == "chunked"
+            for name, value in self.headers
+        )
+
     @classmethod
     def draft(cls, request: Request) -> Self:
         http_date = email.utils.formatdate(time.time(), localtime=False, usegmt=True)
@@ -138,12 +146,27 @@ class Response:
             ),
             None,
         )
-        body_length = sum(len(chunk) for chunk in body)
-        if content_length is None:
-            self.headers.append(("Content-Length", str(body_length)))
-        elif int(content_length) != body_length:
+        transfer_encoding = next(
+            (
+                value
+                for name, value in self.headers
+                if name.upper().replace("_", "-") == "TRANSFER-ENCODING"
+            ),
+            None,
+        )
+        body_iter = iter(body)
+        body_length = len(next(body_iter))
+        if content_length is not None and int(content_length) != body_length:
             raise ValueError(
                 f"Content-Length is wrong: expected {body_length}, got {content_length}"
+            )
+        if transfer_encoding is None and content_length is None:
+            content_length = body_length
+            self.headers.append(("Content-Length", str(body_length)))
+
+        if content_length is not None and next(body_iter, None) is not None:
+            raise ValueError(
+                "Content-Length data must be a single byte string, not multiple chunks"
             )
         self.body = body
 
@@ -155,3 +178,16 @@ class Response:
         status_line = f"HTTP/{self.version[0]}.{self.version[1]} {self.status}\r\n"
         header_fields = "".join(f"{name}: {value}\r\n" for name, value in self.headers)
         return (status_line + header_fields).encode("latin-1") + b"\r\n"
+
+    def body_stream(self) -> Generator[bytes, None, None]:
+        is_chunked = self.is_chunked
+        last_chunk = b"0\r\n\r\n"
+        for data in self.body:
+            if is_chunked:
+                chunk_size = f"{len(data)}\r\n"
+                last_chunk = b"".join([chunk_size.encode("utf-8"), data, b"\r\n"])
+                yield last_chunk
+            else:
+                yield data
+        if is_chunked and last_chunk != b"0\r\n\r\n":
+            yield b"0\r\n\r\n"
