@@ -398,9 +398,9 @@ def response_ready_cycle(
                     ("Content-Type", "text/plain"),
                     ("Transfer-Encoding", "chunked"),
                 ],
-                [b"Hello, ", b"World!"],
+                [b"Hello, ", b"World!", b""],
             ),
-            [b"Hello, ", b"World!"],
+            [b"Hello, ", b"World!", b""],
             [
                 mock.call(
                     b"HTTP/1.1 200 OK\r\n"
@@ -413,6 +413,7 @@ def response_ready_cycle(
                 ),
                 mock.call(b"7\r\nHello, \r\n"),
                 mock.call(b"6\r\nWorld!\r\n"),
+                mock.call(b"0\r\n\r\n"),
             ],
         ),
     ],
