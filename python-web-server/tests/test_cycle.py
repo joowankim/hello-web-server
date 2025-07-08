@@ -1,5 +1,5 @@
 import socket
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from unittest import mock
 
 import pytest
@@ -358,7 +358,7 @@ def response_ready_cycle(
 
 
 @pytest.mark.parametrize(
-    "response_ready_cycle, data, expected",
+    "response_ready_cycle, response_body, expected",
     [
         (
             (
@@ -373,7 +373,7 @@ def response_ready_cycle(
                 ],
                 [b"Hello, World!"],
             ),
-            b"Hello, World!",
+            [b"Hello, World!"],
             [
                 mock.call(
                     b"HTTP/1.1 200 OK\r\n"
@@ -387,15 +387,44 @@ def response_ready_cycle(
                 mock.call(b"Hello, World!"),
             ],
         ),
+        (
+            (
+                (1, 1),
+                "200 OK",
+                [
+                    ("Date", "Fri, 07 Jul 2025 10:00:00 GMT"),
+                    ("Server", "hello-web-server"),
+                    ("Connection", "keep-alive"),
+                    ("Content-Type", "text/plain"),
+                    ("Transfer-Encoding", "chunked"),
+                ],
+                [b"Hello, ", b"World!"],
+            ),
+            [b"Hello, ", b"World!"],
+            [
+                mock.call(
+                    b"HTTP/1.1 200 OK\r\n"
+                    b"Date: Fri, 07 Jul 2025 10:00:00 GMT\r\n"
+                    b"Server: hello-web-server\r\n"
+                    b"Connection: keep-alive\r\n"
+                    b"Content-Type: text/plain\r\n"
+                    b"Transfer-Encoding: chunked\r\n"
+                    b"\r\n"
+                ),
+                mock.call(b"7\r\nHello, \r\n"),
+                mock.call(b"6\r\nWorld!\r\n"),
+            ],
+        ),
     ],
     indirect=["response_ready_cycle"],
 )
 def test_write(
     response_ready_cycle: Cycle,
-    data: bytes,
+    response_body: Iterable[bytes],
     mock_sock: mock.Mock,
     expected: MockCallList,
 ):
-    response_ready_cycle.write(data)
+    for data in response_body:
+        response_ready_cycle.write(data)
 
     mock_sock.sendall.assert_has_calls(expected)

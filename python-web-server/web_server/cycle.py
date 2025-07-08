@@ -31,10 +31,19 @@ class Cycle:
     def write(self, data: bytes) -> None:
         if self.resp is None:
             raise AssertionError("Response headers not set!")
-        self.resp.set_body([data])
-        self.conn.sock.sendall(self.resp.headers_data())
-        self.headers_sent = True
-        self.conn.sock.sendall(data)
+        if self.resp.body is None:
+            self.resp.set_body([data])
+        if not self.headers_sent:
+            self.conn.sock.sendall(self.resp.headers_data())
+            self.headers_sent = True
+        if self.resp.is_chunked:
+            if isinstance(data, str):
+                data = data.encode("utf-8")
+            chunk_size = f"{len(data)}\r\n"
+            chunk = b"".join([chunk_size.encode("utf-8"), data, b"\r\n"])
+            self.conn.sock.sendall(chunk)
+        else:
+            self.conn.sock.sendall(data)
 
     def start_response(
         self,
