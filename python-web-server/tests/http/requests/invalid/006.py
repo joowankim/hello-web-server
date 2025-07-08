@@ -1,3 +1,3 @@
-from web_server.http.errors import LimitRequestLine
+from web_server.errors import LimitRequestLine
 
 request = LimitRequestLine

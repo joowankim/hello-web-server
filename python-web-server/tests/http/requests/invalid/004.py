@@ -1,3 +1,3 @@
-from web_server.http.errors import InvalidHTTPVersion
+from web_server.errors import InvalidHTTPVersion
 
 request = InvalidHTTPVersion

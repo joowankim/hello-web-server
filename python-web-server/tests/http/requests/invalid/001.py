@@ -1,3 +1,3 @@
-from web_server.http.errors import NoMoreData
+from web_server.errors import NoMoreData
 
 request = NoMoreData

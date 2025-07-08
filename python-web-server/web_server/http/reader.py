@@ -6,7 +6,7 @@ from collections.abc import Generator
 
 from typing import Self, IO, ClassVar
 
-from web_server.http.errors import InvalidChunkSize, InvalidHeader
+from web_server.errors import InvalidChunkSize, InvalidHeader
 
 
 class SocketReader:

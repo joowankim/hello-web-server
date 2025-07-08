@@ -1,5 +1,5 @@
 from web_server.config import MessageConfig
-from web_server.http.errors import InvalidHeaderName
+from web_server.errors import InvalidHeaderName
 
 cfg = MessageConfig.default()
 request = InvalidHeaderName

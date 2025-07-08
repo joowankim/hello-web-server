@@ -2,7 +2,7 @@ import dataclasses
 import sys
 from typing import Self
 
-from web_server.http.errors import ConfigurationProblem
+from web_server.errors import ConfigurationProblem
 
 MAX_REQUEST_LINE = 8190
 MAX_HEADERS = 32768

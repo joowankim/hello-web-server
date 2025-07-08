@@ -5,7 +5,7 @@ from typing import Self, ClassVar
 
 from web_server import constants
 from web_server.http.body import RequestBody
-from web_server.http.errors import InvalidHeader
+from web_server.errors import InvalidHeader
 
 
 class Request:

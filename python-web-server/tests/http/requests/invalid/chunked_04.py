@@ -1,3 +1,3 @@
-from web_server.http.errors import InvalidHeader
+from web_server.errors import InvalidHeader
 
 request = InvalidHeader

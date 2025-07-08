@@ -5,7 +5,7 @@ from typing import cast
 import pytest
 
 from tests import fake
-from web_server.http.errors import InvalidChunkSize
+from web_server.errors import InvalidChunkSize
 from web_server.http.reader import Chunk, SocketReader
 
 

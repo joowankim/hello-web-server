@@ -6,7 +6,7 @@ import pytest
 
 from tests import fake
 from web_server.config import MessageConfig
-from web_server.http.errors import (
+from web_server.errors import (
     InvalidRequestLine,
     InvalidRequestMethod,
     InvalidHTTPVersion,

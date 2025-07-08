@@ -5,7 +5,7 @@ import pytest
 
 from tests import fake
 from web_server.http.body import RequestBody
-from web_server.http.errors import InvalidHeader, UnsupportedTransferCoding
+from web_server.errors import InvalidHeader, UnsupportedTransferCoding
 from web_server.http.reader import SocketReader
 
 

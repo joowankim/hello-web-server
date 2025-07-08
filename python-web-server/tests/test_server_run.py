@@ -5,20 +5,21 @@ from collections.abc import Generator
 import httpx
 import pytest
 
-from web_server.server import Server
+from tests import support
+from web_server.worker import Worker
 
 
 @pytest.fixture
-def running_server() -> Generator[None, None, None]:
-    server = Server(host="localhost", port=8000)
-    server_process = multiprocessing.Process(target=server.run)
-    server_process.start()
+def running_worker() -> Generator[None, None, None]:
+    worker = Worker(host="localhost", port=8000, app=support.app)
+    worker_process = multiprocessing.Process(target=worker.run)
+    worker_process.start()
     time.sleep(1)
     try:
         yield
     finally:
-        server_process.terminate()
-        server_process.join()
+        worker_process.terminate()
+        worker_process.join()
 
 
 @pytest.fixture
@@ -26,7 +27,7 @@ def expected() -> bytes:
     return b"Hello, World!"
 
 
-@pytest.mark.usefixtures("running_server")
+@pytest.mark.usefixtures("running_worker")
 def test_run(expected: bytes):
     with httpx.Client() as client:
         response = client.get("http://localhost:8000")

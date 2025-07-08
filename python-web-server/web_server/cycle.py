@@ -1,10 +1,7 @@
 from collections.abc import Callable, Iterable
-from types import TracebackType
 from typing import Any
 
 from web_server import wsgi, connection, http
-
-ExcInfo = tuple[type[BaseException] | None, BaseException | None, TracebackType | None]
 
 
 class Cycle:
@@ -16,7 +13,8 @@ class Cycle:
             [
                 dict[str, Any],
                 Callable[
-                    [str, list[tuple[str, str]], ExcInfo], Callable[[bytes], None]
+                    [str, list[tuple[str, str]], connection.ExcInfo],
+                    Callable[[bytes], None],
                 ],
             ],
             Iterable[bytes],

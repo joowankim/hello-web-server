@@ -4,7 +4,7 @@ from typing import ClassVar
 
 from web_server import config
 from web_server.http import reader, message, body
-from web_server.http.errors import (
+from web_server.errors import (
     InvalidHTTPVersion,
     InvalidRequestLine,
     InvalidRequestMethod,

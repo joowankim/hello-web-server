@@ -1,3 +1,3 @@
-from web_server.http.errors import InvalidChunkSize
+from web_server.errors import InvalidChunkSize
 
 request = InvalidChunkSize

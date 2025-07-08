@@ -1,3 +1,3 @@
-from web_server.http.errors import ObsoleteFolding
+from web_server.errors import ObsoleteFolding
 
 request = ObsoleteFolding

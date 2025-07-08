@@ -1,3 +1,3 @@
-from web_server.http.errors import LimitRequestHeaders
+from web_server.errors import LimitRequestHeaders
 
 request = LimitRequestHeaders

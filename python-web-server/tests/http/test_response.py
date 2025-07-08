@@ -4,7 +4,7 @@ from unittest import mock
 import pytest
 
 from web_server.http import Response, Request, RequestBody
-from web_server.http.errors import InvalidHeader
+from web_server.errors import InvalidHeader
 
 
 @pytest.fixture

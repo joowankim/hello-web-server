@@ -1,3 +1,3 @@
-from web_server.http.errors import InvalidRequestLine
+from web_server.errors import InvalidRequestLine
 
 request = InvalidRequestLine
