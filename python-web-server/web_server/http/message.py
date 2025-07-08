@@ -156,7 +156,7 @@ class Response:
             content_length = body_length
             self.headers.append(("Content-Length", str(body_length)))
 
-        if content_length is not None and next(body_iter) is not None:
+        if content_length is not None and next(body_iter, None) is not None:
             raise ValueError(
                 "Content-Length data must be a single byte string, not multiple chunks"
             )
