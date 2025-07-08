@@ -5,7 +5,7 @@ from typing import Self, ClassVar
 
 from web_server import constants
 from web_server.http.body import RequestBody
-from web_server.http.errors import InvalidHeader
+from web_server.errors import InvalidHeader
 
 
 class Request:
@@ -94,6 +94,12 @@ class Response:
             for name, value in self.headers
         )
 
+    @property
+    def status_code(self) -> int | None:
+        if self.status is None:
+            return None
+        return int(self.status[:3])
+
     @classmethod
     def draft(cls, request: Request) -> Self:
         http_date = email.utils.formatdate(time.time(), localtime=False, usegmt=True)
@@ -130,6 +136,9 @@ class Response:
             if name.lower().replace("_", "-") in self.hob_by_hob_headers:
                 raise InvalidHeader(name)
             new_headers[name.upper().replace("_", "-")] = value
+        for idx, (name, value) in enumerate(new_headers.items()):
+            if name.upper() == "CONNECTION" and self.should_conn_close():
+                new_headers[name.upper().replace("_", "-")] = "close"
         self.headers = [(name.title(), value) for name, value in new_headers.items()]
 
     def set_status(self, status: str) -> None:
@@ -191,3 +200,12 @@ class Response:
                 yield data
         if is_chunked and last_chunk != b"0\r\n\r\n":
             yield b"0\r\n\r\n"
+
+    def should_conn_close(self) -> bool:
+        if self.status is None:
+            raise AssertionError("Response status not set!")
+        if self.is_chunked:
+            return False
+        if self.status_code < 200 or self.status_code in (204, 304):
+            return False
+        return True

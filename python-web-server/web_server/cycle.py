@@ -1,10 +1,7 @@
 from collections.abc import Callable, Iterable
-from types import TracebackType
 from typing import Any
 
 from web_server import wsgi, connection, http
-
-ExcInfo = tuple[type[BaseException] | None, BaseException | None, TracebackType | None]
 
 
 class Cycle:
@@ -16,7 +13,8 @@ class Cycle:
             [
                 dict[str, Any],
                 Callable[
-                    [str, list[tuple[str, str]], ExcInfo], Callable[[bytes], None]
+                    [str, list[tuple[str, str]], connection.ExcInfo],
+                    Callable[[bytes], None],
                 ],
             ],
             Iterable[bytes],
@@ -64,5 +62,7 @@ class Cycle:
     def handle_request(self) -> None:
         response_body = self.app(self.environ.dict(), self.start_response)
         self.resp.set_body(response_body)
+        if not self.headers_sent:
+            self.conn.sock.sendall(self.resp.headers_data())
         for data in self.resp.body_stream():
             self.conn.sock.sendall(data)

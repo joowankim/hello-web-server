@@ -4,7 +4,7 @@ from typing import ClassVar
 
 from web_server import config
 from web_server.http import reader, message, body
-from web_server.http.errors import (
+from web_server.errors import (
     InvalidHTTPVersion,
     InvalidRequestLine,
     InvalidRequestMethod,
@@ -43,26 +43,32 @@ class RequestParser:
         self.reader = socket_reader
 
     def parse(self) -> Generator[message.Request, None, None]:
-        while self.reader.read(1):
-            self.reader.unread(1)
-            method, (path, query, fragment), version = self.parse_request_line()
-            headers = self.parse_headers()
-            req_body = body.RequestBody.create(version, headers, self.reader)
-            trailers = (
-                req_body.reader.trailers if hasattr(req_body.reader, "trailers") else []
-            )
-            yield message.Request(
-                method=method,
-                path=path,
-                query=query,
-                fragment=fragment,
-                headers=headers,
-                body=req_body,
-                version=version,
-                trailers=trailers,
-            )
-            if should_close(version, headers):
-                break
+        try:
+            while self.reader.read(1):
+                self.reader.unread(1)
+                method, (path, query, fragment), version = self.parse_request_line()
+                headers = self.parse_headers()
+                req_body = body.RequestBody.create(version, headers, self.reader)
+                trailers = (
+                    req_body.reader.trailers
+                    if hasattr(req_body.reader, "trailers")
+                    else []
+                )
+                yield message.Request(
+                    method=method,
+                    path=path,
+                    query=query,
+                    fragment=fragment,
+                    headers=headers,
+                    body=req_body,
+                    version=version,
+                    trailers=trailers,
+                )
+                if should_close(version, headers):
+                    break
+        except BlockingIOError:
+            # If the socket is non-blocking and no data is available, we just return
+            return
 
     def parse_request_line(self) -> tuple[str, tuple[str, str, str], tuple[int, int]]:
         line = self.reader.read_until(b"\r\n", self.cfg.limit_request_line)

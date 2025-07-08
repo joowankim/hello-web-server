@@ -3,7 +3,7 @@ import sys
 from typing import Self
 
 from web_server.http import reader
-from web_server.http.errors import InvalidHeader, UnsupportedTransferCoding
+from web_server.errors import InvalidHeader, UnsupportedTransferCoding
 
 
 class RequestBody:

@@ -1,3 +1,3 @@
-from web_server.http.errors import InvalidRequestMethod
+from web_server.errors import InvalidRequestMethod
 
 request = InvalidRequestMethod

@@ -1,7 +1,7 @@
 import pytest
 
 from web_server.config import Config, EnvConfig
-from web_server.http.errors import ConfigurationProblem
+from web_server.errors import ConfigurationProblem
 
 
 @pytest.fixture
