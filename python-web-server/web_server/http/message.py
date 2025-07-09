@@ -5,7 +5,7 @@ from typing import Self, ClassVar
 
 from web_server import constants
 from web_server.http.body import RequestBody
-from web_server.errors import InvalidHeader
+from web_server.errors import InvalidHeader, ParseException
 
 
 class Request:
@@ -126,6 +126,36 @@ class Response:
             status=None,
             headers=headers,
             body=None,
+        )
+
+    @classmethod
+    def bad_request(cls, exc: ParseException) -> Self:
+        content = f"<h1>400 Bad Request</h1><p>{exc}</p>".encode("utf-8")
+        headers = [
+            ("Content-Type", "text/html"),
+            ("Connection", "close"),
+            ("Content-Length", f"{len(content)}"),
+        ]
+        return cls(
+            version=(1, 1),
+            status="400 Bad Request",
+            headers=headers,
+            body=[content],
+        )
+
+    @classmethod
+    def internal_server_error(cls, exc: BaseException) -> Self:
+        content = f"<h1>500 Internal Server Error</h1><p>{exc}</p>".encode("utf-8")
+        headers = [
+            ("Content-Type", "text/html"),
+            ("Connection", "close"),
+            ("Content-Length", f"{len(content)}"),
+        ]
+        return cls(
+            version=(1, 1),
+            status="500 Internal Server Error",
+            headers=headers,
+            body=[content],
         )
 
     def extend_headers(self, headers: list[tuple[str, str]]) -> None:

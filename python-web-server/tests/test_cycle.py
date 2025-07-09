@@ -7,10 +7,11 @@ import pytest
 from tests import support
 from tests.conftest import MockCallList
 from web_server.config import Config
-from web_server.connection import Connection, ExcInfo
+from web_server.connection import Connection
 from web_server.cycle import Cycle
 from web_server.http import Request, RequestBody, Response
 from web_server.wsgi import WSGIEnviron
+from web_server.types import ExcInfo
 
 
 @pytest.fixture

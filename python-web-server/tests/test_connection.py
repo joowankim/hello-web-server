@@ -4,7 +4,8 @@ from unittest import mock
 import pytest
 
 from tests.conftest import MockCallList
-from web_server.connection import Connection, ExcInfo
+from web_server.connection import Connection
+from web_server.types import ExcInfo
 
 
 @pytest.fixture

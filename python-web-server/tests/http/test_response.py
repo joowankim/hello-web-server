@@ -4,7 +4,7 @@ from unittest import mock
 import pytest
 
 from web_server.http import Response, Request, RequestBody
-from web_server.errors import InvalidHeader
+from web_server.errors import InvalidHeader, ParseException
 
 
 @pytest.fixture
@@ -702,3 +702,81 @@ def test_body_stream(body_written_response: Response, expected: list[bytes]):
 )
 def test_should_conn_close(resp: Response, expected: bool):
     assert resp.should_conn_close() == expected
+
+
+@pytest.mark.parametrize(
+    "exc, expected",
+    [
+        (
+            ValueError("Invalid request"),
+            (
+                [
+                    ("Content-Type", "text/html"),
+                    ("Connection", "close"),
+                    ("Content-Length", "46"),
+                ],
+                [b"<h1>400 Bad Request</h1><p>Invalid request</p>"],
+            ),
+        ),
+        (
+            InvalidHeader("Invalid header name"),
+            (
+                [
+                    ("Content-Type", "text/html"),
+                    ("Connection", "close"),
+                    ("Content-Length", "73"),
+                ],
+                [
+                    b"<h1>400 Bad Request</h1><p>Invalid HTTP Header: 'Invalid header name'</p>"
+                ],
+            ),
+        ),
+    ],
+)
+def test_bad_request(
+    exc: ParseException, expected: tuple[list[tuple[str, str]], list[bytes]]
+):
+    response = Response.bad_request(exc=exc)
+
+    headers, body = expected
+    assert response.status == "400 Bad Request"
+    assert response.headers == headers
+    assert response.body == body
+
+
+@pytest.mark.parametrize(
+    "exc, expected",
+    [
+        (
+            RuntimeError("Unexpected error"),
+            (
+                [
+                    ("Content-Type", "text/html"),
+                    ("Connection", "close"),
+                    ("Content-Length", "57"),
+                ],
+                [b"<h1>500 Internal Server Error</h1><p>Unexpected error</p>"],
+            ),
+        ),
+        (
+            Exception("General exception"),
+            (
+                [
+                    ("Content-Type", "text/html"),
+                    ("Connection", "close"),
+                    ("Content-Length", "58"),
+                ],
+                [b"<h1>500 Internal Server Error</h1><p>General exception</p>"],
+            ),
+        ),
+    ],
+)
+def test_internal_server_error(
+    exc: BaseException, expected: tuple[list[tuple[str, str]], list[bytes]]
+):
+    response = Response.internal_server_error(exc)
+
+    headers, body = expected
+    assert response.status == "500 Internal Server Error"
+    assert response.headers == headers
+    assert response.body == body
