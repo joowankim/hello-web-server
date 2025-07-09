@@ -735,12 +735,9 @@ def test_should_conn_close(resp: Response, expected: bool):
     ],
 )
 def test_bad_request(exc: ExcInfo, expected: tuple[list[tuple[str, str]], list[bytes]]):
-    protocol_version = (1, 1)
-
-    response = Response.bad_request(protocol_version=protocol_version, exc=exc)
+    response = Response.bad_request(exc=exc)
 
     headers, body = expected
-    assert response.version == (1, 1)
     assert response.status == "400 Bad Request"
     assert response.headers == headers
     assert response.body == body
@@ -776,14 +773,9 @@ def test_bad_request(exc: ExcInfo, expected: tuple[list[tuple[str, str]], list[b
 def test_internal_server_error(
     exc: ExcInfo, expected: tuple[list[tuple[str, str]], list[bytes]]
 ):
-    protocol_version = (1, 1)
-
-    response = Response.internal_server_error(
-        protocol_version=protocol_version, exc=exc
-    )
+    response = Response.internal_server_error(exc)
 
     headers, body = expected
-    assert response.version == (1, 1)
     assert response.status == "500 Internal Server Error"
     assert response.headers == headers
     assert response.body == body

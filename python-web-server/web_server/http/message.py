@@ -130,7 +130,7 @@ class Response:
         )
 
     @classmethod
-    def bad_request(cls, protocol_version: tuple[int, int], exc: ExcInfo) -> Self:
+    def bad_request(cls, exc: ExcInfo) -> Self:
         content = f"<h1>400 Bad Request</h1><p>{exc[1]}</p>".encode("utf-8")
         headers = [
             ("Content-Type", "text/html"),
@@ -138,16 +138,14 @@ class Response:
             ("Content-Length", f"{len(content)}"),
         ]
         return cls(
-            version=protocol_version,
+            version=(1, 1),
             status="400 Bad Request",
             headers=headers,
             body=[content],
         )
 
     @classmethod
-    def internal_server_error(
-        cls, protocol_version: tuple[int, int], exc: ExcInfo
-    ) -> Self:
+    def internal_server_error(cls, exc: ExcInfo) -> Self:
         content = f"<h1>500 Internal Server Error</h1><p>{exc[1]}</p>".encode("utf-8")
         headers = [
             ("Content-Type", "text/html"),
@@ -155,7 +153,7 @@ class Response:
             ("Content-Length", f"{len(content)}"),
         ]
         return cls(
-            version=protocol_version,
+            version=(1, 1),
             status="500 Internal Server Error",
             headers=headers,
             body=[content],
