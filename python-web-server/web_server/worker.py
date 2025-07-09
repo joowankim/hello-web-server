@@ -4,6 +4,7 @@ from typing import Any
 
 from web_server import config, http, wsgi, connection
 from web_server.cycle import Cycle
+from web_server.errors import ParseException
 
 
 class Worker:
@@ -27,7 +28,7 @@ class Worker:
         self.app = app
         self._server = None
 
-    def run(self):
+    def run(self) -> None:
         print("Worker started.")
         new_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         new_socket.bind((self.host, self.port))
@@ -40,7 +41,8 @@ class Worker:
             parser = http.RequestParser(
                 cfg=cfg.message, socket_reader=http.SocketReader(sock=conn)
             )
-            for req in parser.parse():
+            try:
+                req = next(parser.parse())
                 environ = wsgi.WSGIEnviron.build(
                     cfg=cfg, server=conn.getsockname(), request=req
                 )
@@ -49,4 +51,13 @@ class Worker:
                     environ=environ,
                     app=self.app,
                 )
-                cycle.handle_request()
+                resp = cycle.handle_request()
+            except ParseException as exc:
+                resp = http.Response.bad_request(exc)
+            except BaseException as exc:
+                resp = http.Response.internal_server_error(exc)
+            finally:
+                if not cycle.headers_sent:
+                    conn.sendall(resp.headers_data())
+                    for chunk in resp.body_stream():
+                        conn.sendall(chunk)

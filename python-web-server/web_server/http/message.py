@@ -5,8 +5,7 @@ from typing import Self, ClassVar
 
 from web_server import constants
 from web_server.http.body import RequestBody
-from web_server.errors import InvalidHeader
-from web_server.types import ExcInfo
+from web_server.errors import InvalidHeader, ParseException
 
 
 class Request:
@@ -130,8 +129,8 @@ class Response:
         )
 
     @classmethod
-    def bad_request(cls, exc: ExcInfo) -> Self:
-        content = f"<h1>400 Bad Request</h1><p>{exc[1]}</p>".encode("utf-8")
+    def bad_request(cls, exc: ParseException) -> Self:
+        content = f"<h1>400 Bad Request</h1><p>{exc}</p>".encode("utf-8")
         headers = [
             ("Content-Type", "text/html"),
             ("Connection", "close"),
@@ -145,8 +144,8 @@ class Response:
         )
 
     @classmethod
-    def internal_server_error(cls, exc: ExcInfo) -> Self:
-        content = f"<h1>500 Internal Server Error</h1><p>{exc[1]}</p>".encode("utf-8")
+    def internal_server_error(cls, exc: BaseException) -> Self:
+        content = f"<h1>500 Internal Server Error</h1><p>{exc}</p>".encode("utf-8")
         headers = [
             ("Content-Type", "text/html"),
             ("Connection", "close"),

@@ -4,8 +4,7 @@ from unittest import mock
 import pytest
 
 from web_server.http import Response, Request, RequestBody
-from web_server.errors import InvalidHeader
-from web_server.types import ExcInfo
+from web_server.errors import InvalidHeader, ParseException
 
 
 @pytest.fixture
@@ -709,7 +708,7 @@ def test_should_conn_close(resp: Response, expected: bool):
     "exc, expected",
     [
         (
-            (ValueError, ValueError("Invalid request"), None),
+            ValueError("Invalid request"),
             (
                 [
                     ("Content-Type", "text/html"),
@@ -720,7 +719,7 @@ def test_should_conn_close(resp: Response, expected: bool):
             ),
         ),
         (
-            (InvalidHeader, InvalidHeader("Invalid header name"), None),
+            InvalidHeader("Invalid header name"),
             (
                 [
                     ("Content-Type", "text/html"),
@@ -734,7 +733,9 @@ def test_should_conn_close(resp: Response, expected: bool):
         ),
     ],
 )
-def test_bad_request(exc: ExcInfo, expected: tuple[list[tuple[str, str]], list[bytes]]):
+def test_bad_request(
+    exc: ParseException, expected: tuple[list[tuple[str, str]], list[bytes]]
+):
     response = Response.bad_request(exc=exc)
 
     headers, body = expected
@@ -747,7 +748,7 @@ def test_bad_request(exc: ExcInfo, expected: tuple[list[tuple[str, str]], list[b
     "exc, expected",
     [
         (
-            (RuntimeError, RuntimeError("Unexpected error"), None),
+            RuntimeError("Unexpected error"),
             (
                 [
                     ("Content-Type", "text/html"),
@@ -758,7 +759,7 @@ def test_bad_request(exc: ExcInfo, expected: tuple[list[tuple[str, str]], list[b
             ),
         ),
         (
-            (Exception, Exception("General exception"), None),
+            Exception("General exception"),
             (
                 [
                     ("Content-Type", "text/html"),
@@ -771,7 +772,7 @@ def test_bad_request(exc: ExcInfo, expected: tuple[list[tuple[str, str]], list[b
     ],
 )
 def test_internal_server_error(
-    exc: ExcInfo, expected: tuple[list[tuple[str, str]], list[bytes]]
+    exc: BaseException, expected: tuple[list[tuple[str, str]], list[bytes]]
 ):
     response = Response.internal_server_error(exc)
 
