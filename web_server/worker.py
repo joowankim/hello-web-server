@@ -27,6 +27,7 @@ class Worker:
         self.port = port
         self.app = app
         self._server = None
+        self._alive = True
 
     def run(self) -> None:
         print("Worker started.")
@@ -34,6 +35,10 @@ class Worker:
         new_socket.bind((self.host, self.port))
         self._server = new_socket
         self._server.listen(0)
+        while self._alive:
+            self.listen()
+
+    def listen(self) -> None:
         conn, addr = self._server.accept()
         conn.setblocking(False)
         with conn:
