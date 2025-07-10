@@ -1,3 +1,5 @@
+import errno
+import signal
 import socket
 from collections.abc import Callable, Iterable
 from typing import Any
@@ -26,15 +28,33 @@ class Worker:
         self.alive = True
         self.server_socket = server_socket
         self.server_socket.listen(socket.SOMAXCONN)
+        self._setup_signals()
+
+    def _setup_signals(self) -> None:
+        def shutdown_signal_handler(signum, frame):
+            print(f"Received signal {signum}, shutting down gracefully.")
+            self.shutdown()
+
+        signal.signal(signal.SIGINT, shutdown_signal_handler)
+        signal.signal(signal.SIGTERM, shutdown_signal_handler)
+        signal.signal(signal.SIGQUIT, shutdown_signal_handler)
+        signal.signal(signal.SIGABRT, shutdown_signal_handler)
 
     def shutdown(self) -> None:
+        print("Worker shutting down...")
         self.alive = False
         self.server_socket.close()
 
     def run(self) -> None:
         print("Worker started.")
-        while self.alive:
-            self.listen()
+        try:
+            while self.alive:
+                self.listen()
+        except OSError as exc:
+            if exc.errno in (errno.EINTR, errno.EBADF):
+                print("Server socket closed, shutting down gracefully.")
+            else:
+                raise exc
 
     def listen(self) -> None:
         conn, addr = self.server_socket.accept()
