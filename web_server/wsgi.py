@@ -39,6 +39,9 @@ class WSGIErrorStream(io.RawIOBase):
                 pass
 
     def writelines(self, seq: Sequence[str]) -> None:
+        if self._is_closed:
+            return
+
         for stream in self.streams:
             for line in seq:
                 try:
