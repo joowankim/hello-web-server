@@ -1,3 +1,4 @@
+import socket
 from collections.abc import Iterable
 
 from web_server.worker import Worker
@@ -18,7 +19,9 @@ def app(environ, start_response) -> Iterable[bytes]:
 
 
 def main():
-    worker = Worker(host="localhost", port=8000, app=app)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(("localhost", 8000))
+    worker = Worker(server_socket=sock, app=app)
     worker.run()
 
 

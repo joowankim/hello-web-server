@@ -10,8 +10,7 @@ from web_server.errors import ParseException
 class Worker:
     def __init__(
         self,
-        host: str,
-        port: int,
+        server_socket: socket.socket,
         app: Callable[
             [
                 dict[str, Any],
@@ -23,23 +22,22 @@ class Worker:
             Iterable[bytes],
         ],
     ):
-        self.host = host
-        self.port = port
         self.app = app
-        self._server = None
-        self._alive = True
+        self.alive = True
+        self.server_socket = server_socket
+        self.server_socket.listen(socket.SOMAXCONN)
+
+    def shutdown(self) -> None:
+        self.alive = False
+        self.server_socket.close()
 
     def run(self) -> None:
         print("Worker started.")
-        new_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        new_socket.bind((self.host, self.port))
-        self._server = new_socket
-        self._server.listen(0)
-        while self._alive:
+        while self.alive:
             self.listen()
 
     def listen(self) -> None:
-        conn, addr = self._server.accept()
+        conn, addr = self.server_socket.accept()
         conn.setblocking(False)
         with conn:
             cfg = config.Config.default()
