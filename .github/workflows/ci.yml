@@ -29,8 +29,6 @@ jobs:
 
       - name: Install dependencies
         run: uv sync
-        working-directory: ./python-web-server
 
       - name: Run tests
         run: uv run pytest
-        working-directory: ./python-web-server
