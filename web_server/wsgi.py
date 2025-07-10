@@ -14,6 +14,7 @@ class WSGIErrorStream(io.RawIOBase):
         # we don't need to call super() in the __init__ method.
         # pylint: disable=super-init-not-called
         self.streams = sub_streams
+        self._is_closed = False
 
     @classmethod
     def with_stderr(cls) -> Self:
@@ -27,8 +28,15 @@ class WSGIErrorStream(io.RawIOBase):
                 stream.write(data.encode("UTF-8"))
 
     def flush(self) -> None:
+        if self._is_closed:
+            return
+
         for stream in self.streams:
-            stream.flush()
+            try:
+                if not stream.closed:
+                    stream.flush()
+            except (ValueError, OSError):
+                pass
 
     def writelines(self, seq: Sequence[str]) -> None:
         for stream in self.streams:
@@ -37,6 +45,16 @@ class WSGIErrorStream(io.RawIOBase):
                     stream.write(line)
                 except UnicodeEncodeError:
                     stream.write(line.encode("UTF-8"))
+
+    def close(self) -> None:
+        if not self._is_closed:
+            self._is_closed = True
+
+    def __del__(self) -> None:
+        try:
+            self.close()
+        except Exception:
+            pass
 
 
 @dataclasses.dataclass
