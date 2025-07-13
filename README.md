@@ -7,7 +7,7 @@
 ## 주요 특징
 
 - **WSGI 호환**: Python 웹 애플리케이션을 위한 표준 인터페이스 구현
-- **HTTP 프로토콜 지원**: HTTP/1.0, HTTP/1.1, HTTP/2.0 요청 파싱 및 응답 처리
+- **HTTP 프로토콜 지원**: HTTP/1.0, HTTP/1.1 요청 파싱 및 응답 처리
 - **청크 전송 인코딩**: Transfer-Encoding: chunked 지원
 - **요청 본문 처리**: Content-Length 및 청크 방식 요청 본문 파싱
 - **연결 관리**: keep-alive 및 close 연결 처리
