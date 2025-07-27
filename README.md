@@ -46,8 +46,7 @@ hello-web-server/
 1. **HTTP 프로토콜 이해**: 요청 라인, 헤더, 본문 파싱
 2. **소켓 프로그래밍**: TCP 소켓을 이용한 클라이언트-서버 통신
 3. **WSGI 인터페이스**: Python 웹 애플리케이션과 웹 서버 간 표준 인터페이스
-4. **동시성 처리**: 비동기 I/O 및 연결 관리
-5. **에러 처리**: HTTP 에러 상태 코드 및 예외 처리
+4. **에러 처리**: HTTP 에러 상태 코드 및 예외 처리
 
 ## 시작하기
 
@@ -79,7 +78,7 @@ uv run python main.py
 uv run pytest
 
 # 특정 테스트 실행
-uv run pytest tests/test_cycle.py
+uv run pytest .
 
 # 커버리지 포함 테스트
 uv run pytest --cov=web_server
