@@ -78,7 +78,7 @@ uv run python main.py
 uv run pytest
 
 # 특정 테스트 실행
-uv run pytest .
+uv run pytest tests/
 
 # 커버리지 포함 테스트
 uv run pytest --cov=web_server
